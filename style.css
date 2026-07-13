@@ -1,0 +1,193 @@
+:root {
+  --bg: #f4f6f8;
+  --fg: #1a222c;
+  --card-bg: #ffffff;
+  --accent: #2563eb;
+  --accent-fg: #ffffff;
+  --muted: #5b6774;
+  --border: #d7dde3;
+  --warn-bg: #fff7e6;
+  --warn-border: #f0c36d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12161b;
+    --fg: #e8edf2;
+    --card-bg: #1c232b;
+    --accent: #3b82f6;
+    --accent-fg: #ffffff;
+    --muted: #98a4b0;
+    --border: #313b46;
+    --warn-bg: #2b2413;
+    --warn-border: #8a6d2f;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.55;
+}
+
+.step { display: none; padding: 1.5rem 1rem 3rem; }
+.step.active { display: block; }
+
+.card {
+  max-width: 640px;
+  margin: 0 auto 1.25rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem 1.75rem;
+}
+
+h1 { font-size: 1.6rem; margin-top: 0; }
+h2 { font-size: 1.3rem; margin-top: 0; }
+
+.lead { font-size: 1.05rem; }
+.hint { color: var(--muted); font-size: 0.9rem; }
+
+.steps-list li { margin-bottom: 0.4rem; }
+
+.warning {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  font-size: 0.92rem;
+  margin: 1rem 0;
+}
+
+.btn {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+.btn:hover { filter: brightness(0.95); }
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.btn.small { padding: 0.35rem 0.8rem; font-size: 0.9rem; }
+.btn.ghost { border-style: dashed; color: var(--muted); }
+.btn.choice.selected {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+
+/* --- Calibration --- */
+#card-zone {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 40vh;
+  padding: 1rem;
+}
+
+#credit-card {
+  /* ratio ISO ID-1 : 85.60 x 53.98 mm — hauteur fixée en JS */
+  background: linear-gradient(135deg, #3f5efb, #1e3a8a);
+  border-radius: 4.5% / 7.2%; /* ~3.18 mm de rayon de coin */
+  position: relative;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.85);
+}
+.cc-chip {
+  position: absolute;
+  left: 8%; top: 30%;
+  width: 14%; height: 20%;
+  background: linear-gradient(135deg, #e8c76b, #b8963f);
+  border-radius: 12%;
+}
+.cc-number {
+  position: absolute;
+  left: 8%; bottom: 18%;
+  font-size: 0.9em;
+  letter-spacing: 0.1em;
+}
+
+.controls { text-align: center; }
+#card-slider { width: 100%; margin-bottom: 0.75rem; }
+.fine-controls { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1rem; }
+
+/* --- Distance --- */
+.distance-choices { display: flex; gap: 0.6rem; justify-content: center; margin: 0.8rem 0; }
+
+#thumb-zone { text-align: center; padding: 2rem 1rem; }
+#thumb-bar {
+  height: 60px;
+  margin: 0 auto;
+  background: repeating-linear-gradient(90deg, var(--fg) 0, var(--fg) 8px, var(--accent) 8px, var(--accent) 16px);
+  border-radius: 6px;
+}
+
+hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
+
+/* --- Test --- */
+#step-test { min-height: 90vh; display: none; flex-direction: column; }
+#step-test.active { display: flex; }
+
+#test-header {
+  display: flex;
+  justify-content: space-between;
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+#optotype-zone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 45vh;
+  /* fond blanc constant : un vrai tableau de Snellen est noir sur blanc */
+  background: #ffffff;
+  color: #000000;
+  border-radius: 12px;
+  max-width: 900px;
+  width: 100%;
+  margin: 1rem auto;
+}
+#optotype { display: block; }
+
+#answer-pad { text-align: center; max-width: 640px; margin: 0 auto; width: 100%; }
+.arrow-grid {
+  display: grid;
+  grid-template-areas: ". up ." "left down right";
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 0.8rem;
+}
+.arrow[data-dir="up"]    { grid-area: up; }
+.arrow[data-dir="left"]  { grid-area: left; }
+.arrow[data-dir="down"]  { grid-area: down; }
+.arrow[data-dir="right"] { grid-area: right; }
+.btn.arrow { font-size: 1.4rem; width: 64px; height: 56px; padding: 0; }
+
+/* --- Résultats --- */
+#results-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+#results-table th, #results-table td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.7rem;
+  text-align: center;
+}
+#results-table th:first-child, #results-table td:first-child { text-align: left; }
+
+footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 1rem; }

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test de Snellen à la maison</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ÉTAPE 0 : Accueil -->
+  <section id="step-intro" class="step active">
+    <div class="card">
+      <h1>👁️ Test de Snellen à la maison</h1>
+      <p class="lead">Estimez votre acuité visuelle depuis chez vous, en trois étapes&nbsp;:</p>
+      <ol class="steps-list">
+        <li><strong>Calibration</strong> — mesurez votre écran avec une carte de crédit</li>
+        <li><strong>Distance</strong> — placez-vous à la bonne distance grâce à votre pouce</li>
+        <li><strong>Test</strong> — identifiez l'orientation des «&nbsp;E&nbsp;» qui rapetissent</li>
+      </ol>
+      <div class="warning">
+        ⚠️ <strong>Ce test n'est pas un examen médical.</strong> Il donne seulement une
+        estimation approximative de votre acuité visuelle. Il ne remplace en aucun cas
+        une consultation chez un optométriste ou un ophtalmologiste. Consultez un
+        professionnel pour tout problème de vision.
+      </div>
+      <p class="hint">Il vous faut&nbsp;: une carte de crédit (ou toute carte au format standard),
+        un endroit où reculer d'environ 2&nbsp;mètres, et quelque chose pour couvrir un œil.</p>
+      <button class="btn primary" id="btn-start">Commencer</button>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 1 : Calibration -->
+  <section id="step-calibrate" class="step">
+    <div class="card">
+      <h2>Étape 1 — Calibration de l'écran</h2>
+      <p>Placez une carte de crédit <strong>contre l'écran</strong>, sur le rectangle
+        ci-dessous. Ajustez le curseur jusqu'à ce que le rectangle ait <strong>exactement
+        la même taille</strong> que votre carte.</p>
+    </div>
+
+    <div id="card-zone">
+      <div id="credit-card">
+        <div class="cc-chip"></div>
+        <div class="cc-number">•••• •••• •••• ••••</div>
+      </div>
+    </div>
+
+    <div class="card controls">
+      <input type="range" id="card-slider" min="200" max="1200" step="1" value="500">
+      <div class="fine-controls">
+        <button class="btn small" id="card-minus">− plus petit</button>
+        <button class="btn small" id="card-plus">+ plus grand</button>
+      </div>
+      <p class="hint">Astuce&nbsp;: alignez le coin inférieur gauche de la carte avec celui du
+        rectangle, puis ajustez jusqu'à ce que les bords droit et supérieur coïncident.</p>
+      <button class="btn primary" id="btn-calibrated">Le rectangle correspond à ma carte ✓</button>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 2 : Distance -->
+  <section id="step-distance" class="step">
+    <div class="card">
+      <h2>Étape 2 — Distance de vision</h2>
+      <p>Choisissez votre distance de test (plus c'est loin, plus le test est précis,
+        si votre écran le permet)&nbsp;:</p>
+      <div class="distance-choices">
+        <button class="btn choice" data-dist="1000">1 m</button>
+        <button class="btn choice selected" data-dist="1500">1,5 m</button>
+        <button class="btn choice" data-dist="2000">2 m</button>
+      </div>
+      <hr>
+      <p><strong>Vérifiez votre distance avec votre pouce&nbsp;:</strong> le pouce au bout
+        du bras tendu couvre environ 2° d'angle visuel. Tendez le bras complètement,
+        pouce levé, un œil fermé, et <strong>reculez ou avancez</strong> jusqu'à ce que
+        votre pouce cache <em>exactement</em> la barre ci-dessous.</p>
+    </div>
+
+    <div id="thumb-zone">
+      <div id="thumb-bar"></div>
+      <p class="hint" id="thumb-caption"></p>
+    </div>
+
+    <div class="card controls">
+      <button class="btn primary" id="btn-distanced">Je suis à la bonne distance ✓</button>
+      <p class="hint">Restez à cette distance pour tout le test. Vous pouvez utiliser
+        un clavier sans fil, ou revenir cliquer entre chaque réponse (en reprenant votre
+        position à chaque fois), ou demander à quelqu'un de cliquer pour vous.</p>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 3 : Choix de l'œil -->
+  <section id="step-eye" class="step">
+    <div class="card">
+      <h2>Étape 3 — Préparation du test</h2>
+      <p>Le test se fait <strong>un œil à la fois</strong>. Couvrez l'autre œil avec la
+        paume de la main (sans appuyer) ou un cache. Gardez vos lunettes ou lentilles
+        si vous en portez habituellement — le test mesurera votre vision corrigée.</p>
+      <p>Un «&nbsp;E&nbsp;» va s'afficher dans une des quatre orientations. Indiquez de
+        quel côté pointent ses branches avec les <strong>flèches du clavier</strong> ou
+        les boutons à l'écran. Si vous ne voyez pas bien, devinez&nbsp;!</p>
+      <div class="eye-choices">
+        <button class="btn primary" id="btn-eye-right">Commencer — œil droit<br><small>(couvrez l'œil gauche)</small></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 4 : Test -->
+  <section id="step-test" class="step">
+    <div id="test-header">
+      <span id="test-eye-label"></span>
+      <span id="test-line-label"></span>
+    </div>
+    <div id="optotype-zone">
+      <svg id="optotype" viewBox="0 0 5 5" aria-label="optotype E">
+        <g id="optotype-g">
+          <path d="M0,0 H5 V1 H1 V2 H5 V3 H1 V4 H5 V5 H0 Z" fill="currentColor"/>
+        </g>
+      </svg>
+    </div>
+    <div id="answer-pad">
+      <p class="hint">Vers où pointent les branches du E&nbsp;?</p>
+      <div class="arrow-grid">
+        <button class="btn arrow" data-dir="up"    aria-label="haut">▲</button>
+        <button class="btn arrow" data-dir="left"  aria-label="gauche">◀</button>
+        <button class="btn arrow" data-dir="down"  aria-label="bas">▼</button>
+        <button class="btn arrow" data-dir="right" aria-label="droite">▶</button>
+      </div>
+      <button class="btn ghost" id="btn-cant-see">Je ne vois qu'une tache ✗</button>
+    </div>
+  </section>
+
+  <!-- Interlude entre les deux yeux -->
+  <section id="step-switch" class="step">
+    <div class="card">
+      <h2>Premier œil terminé ✓</h2>
+      <p id="switch-result"></p>
+      <p>Maintenant, couvrez l'<strong>œil droit</strong> et testez l'<strong>œil
+        gauche</strong>. Restez à la même distance.</p>
+      <button class="btn primary" id="btn-eye-left">Tester l'œil gauche</button>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 5 : Résultats -->
+  <section id="step-results" class="step">
+    <div class="card">
+      <h2>Résultats</h2>
+      <table id="results-table">
+        <thead>
+          <tr><th></th><th>Snellen (m)</th><th>Snellen (pi)</th><th>Décimale</th><th>LogMAR</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="results-comment"></p>
+      <div class="warning">
+        ⚠️ Rappel&nbsp;: ceci est une <strong>estimation à titre indicatif seulement</strong>,
+        sensible à la calibration, à la distance réelle, à l'éclairage et à la qualité de
+        l'écran. Seul un examen par un professionnel de la vue est fiable. En cas de doute
+        ou de changement dans votre vision, consultez.
+      </div>
+      <button class="btn primary" id="btn-restart">Refaire le test</button>
+    </div>
+  </section>
+
+  <footer>
+    <p>Test 100&nbsp;% local — aucune donnée n'est envoyée nulle part.
+       Optotype&nbsp;: E de Snellen (grille 5×5 standard).</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
