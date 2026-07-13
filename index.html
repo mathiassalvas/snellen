@@ -3,44 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test de Snellen à la maison</title>
+  <title>Test de Snellen à la maison — Home Snellen Test</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- ÉTAPE 0 : Accueil -->
+  <div id="lang-toggle">
+    <button class="btn small" id="btn-lang-fr" data-lang="fr">FR</button>
+    <button class="btn small" id="btn-lang-en" data-lang="en">EN</button>
+  </div>
+
+  <!-- ÉTAPE 0 : Accueil / Home -->
   <section id="step-intro" class="step active">
     <div class="card">
-      <h1>👁️ Test de Snellen à la maison</h1>
-      <p class="lead">Estimez votre acuité visuelle depuis chez vous, en trois étapes&nbsp;:</p>
+      <h1 data-i18n="intro.title"></h1>
+      <p class="lead" data-i18n="intro.lead"></p>
       <ol class="steps-list">
-        <li><strong>Calibration</strong> — mesurez votre écran avec une carte de crédit</li>
-        <li><strong>Distance</strong> — placez-vous à la bonne distance grâce à votre pouce</li>
-        <li><strong>Test</strong> — identifiez l'orientation des «&nbsp;E&nbsp;» qui rapetissent</li>
+        <li data-i18n="intro.step1"></li>
+        <li data-i18n="intro.step2"></li>
+        <li data-i18n="intro.step3"></li>
       </ol>
-      <div class="warning">
-        ⚠️ <strong>Ce test n'est pas un examen médical.</strong> Il donne seulement une
-        estimation approximative de votre acuité visuelle. Il ne remplace en aucun cas
-        une consultation chez un optométriste ou un ophtalmologiste. Consultez un
-        professionnel pour tout problème de vision.
-      </div>
-      <p class="hint">Il vous faut&nbsp;: une carte de crédit (ou toute carte au format standard),
-        un endroit où reculer d'environ 2&nbsp;mètres, et quelque chose pour couvrir un œil.</p>
-      <button class="btn primary" id="btn-start">Commencer</button>
+      <div class="warning" data-i18n="intro.warning"></div>
+      <p class="hint" data-i18n="intro.need"></p>
+      <button class="btn primary" id="btn-start" data-i18n="intro.start"></button>
     </div>
   </section>
 
   <!-- ÉTAPE 1 : Calibration -->
   <section id="step-calibrate" class="step">
     <div class="card">
-      <h2>Étape 1 — Calibration de l'écran</h2>
-      <p>Placez une carte de crédit <strong>contre l'écran</strong>, sur le rectangle
-        ci-dessous. Ajustez le curseur jusqu'à ce que le rectangle ait <strong>exactement
-        la même taille</strong> que votre carte.</p>
+      <h2 data-i18n="cal.title"></h2>
+      <p data-i18n="cal.instructions"></p>
     </div>
 
     <div id="card-zone">
       <div id="credit-card">
+        <div class="corner-mark top-left"></div>
+        <div class="corner-mark top-right"></div>
+        <div class="corner-mark bottom-left"></div>
+        <div class="corner-mark bottom-right"></div>
         <div class="cc-chip"></div>
         <div class="cc-number">•••• •••• •••• ••••</div>
       </div>
@@ -49,31 +50,31 @@
     <div class="card controls">
       <input type="range" id="card-slider" min="200" max="1200" step="1" value="500">
       <div class="fine-controls">
-        <button class="btn small" id="card-minus">− plus petit</button>
-        <button class="btn small" id="card-plus">+ plus grand</button>
+        <button class="btn small" id="card-minus" data-i18n="cal.smaller"></button>
+        <button class="btn small" id="card-plus" data-i18n="cal.larger"></button>
       </div>
-      <p class="hint">Astuce&nbsp;: alignez le coin inférieur gauche de la carte avec celui du
-        rectangle, puis ajustez jusqu'à ce que les bords droit et supérieur coïncident.</p>
-      <button class="btn primary" id="btn-calibrated">Le rectangle correspond à ma carte ✓</button>
+      <p class="hint" data-i18n="cal.tip"></p>
+      <button class="btn primary" id="btn-calibrated" data-i18n="cal.done"></button>
     </div>
   </section>
 
   <!-- ÉTAPE 2 : Distance -->
   <section id="step-distance" class="step">
     <div class="card">
-      <h2>Étape 2 — Distance de vision</h2>
-      <p>Choisissez votre distance de test (plus c'est loin, plus le test est précis,
-        si votre écran le permet)&nbsp;:</p>
-      <div class="distance-choices">
-        <button class="btn choice" data-dist="1000">1 m</button>
-        <button class="btn choice selected" data-dist="1500">1,5 m</button>
-        <button class="btn choice" data-dist="2000">2 m</button>
+      <h2 data-i18n="dist.title"></h2>
+      <p data-i18n="dist.choose"></p>
+      <h3 data-i18n="dist.thumbTitle"></h3>
+      <p data-i18n="dist.thumbText"></p>
+      <label class="range-label" for="distance-slider">
+        <span data-i18n="dist.sliderLabel"></span>
+        <strong id="distance-value"></strong>
+      </label>
+      <input type="range" id="distance-slider" min="600" max="3000" step="10" value="1500">
+      <div class="thumb-size-controls">
+        <button class="btn thumb-adjust" id="thumb-smaller" data-i18n="dist.thumbSmaller"></button>
+        <button class="btn thumb-adjust" id="thumb-larger" data-i18n="dist.thumbLarger"></button>
       </div>
-      <hr>
-      <p><strong>Vérifiez votre distance avec votre pouce&nbsp;:</strong> le pouce au bout
-        du bras tendu couvre environ 2° d'angle visuel. Tendez le bras complètement,
-        pouce levé, un œil fermé, et <strong>reculez ou avancez</strong> jusqu'à ce que
-        votre pouce cache <em>exactement</em> la barre ci-dessous.</p>
+      <p class="hint" data-i18n="dist.sliderHint"></p>
     </div>
 
     <div id="thumb-zone">
@@ -82,89 +83,209 @@
     </div>
 
     <div class="card controls">
-      <button class="btn primary" id="btn-distanced">Je suis à la bonne distance ✓</button>
-      <p class="hint">Restez à cette distance pour tout le test. Vous pouvez utiliser
-        un clavier sans fil, ou revenir cliquer entre chaque réponse (en reprenant votre
-        position à chaque fois), ou demander à quelqu'un de cliquer pour vous.</p>
+      <button class="btn primary" id="btn-distanced" data-i18n="dist.ok"></button>
+      <p class="hint" data-i18n="dist.stay"></p>
     </div>
   </section>
 
-  <!-- ÉTAPE 3 : Choix de l'œil -->
+  <!-- ÉTAPE 3 : Choix du test / Test choice -->
+  <section id="step-mode" class="step">
+    <div class="card">
+      <h2 data-i18n="mode.title"></h2>
+      <p data-i18n="mode.text"></p>
+      <div class="mode-choices">
+        <button class="btn mode-choice selected" data-mode="tumblingE">
+          <strong data-i18n="mode.eTitle"></strong>
+          <span data-i18n="mode.eText"></span>
+        </button>
+        <button class="btn mode-choice" data-mode="letters">
+          <strong data-i18n="mode.lettersTitle"></strong>
+          <span data-i18n="mode.lettersText"></span>
+        </button>
+      </div>
+      <button class="btn primary" id="btn-mode-next" data-i18n="mode.next"></button>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 4 : Choix de l'œil / Eye choice -->
   <section id="step-eye" class="step">
     <div class="card">
-      <h2>Étape 3 — Préparation du test</h2>
-      <p>Le test se fait <strong>un œil à la fois</strong>. Couvrez l'autre œil avec la
-        paume de la main (sans appuyer) ou un cache. Gardez vos lunettes ou lentilles
-        si vous en portez habituellement — le test mesurera votre vision corrigée.</p>
-      <p>Un «&nbsp;E&nbsp;» va s'afficher dans une des quatre orientations. Indiquez de
-        quel côté pointent ses branches avec les <strong>flèches du clavier</strong> ou
-        les boutons à l'écran. Si vous ne voyez pas bien, devinez&nbsp;!</p>
+      <h2 data-i18n="eye.title"></h2>
+      <p data-i18n="eye.p1"></p>
+      <p data-i18n="eye.p2"></p>
       <div class="eye-choices">
-        <button class="btn primary" id="btn-eye-right">Commencer — œil droit<br><small>(couvrez l'œil gauche)</small></button>
+        <button class="btn primary" id="btn-eye-right" data-i18n="eye.startRight"></button>
       </div>
     </div>
   </section>
 
-  <!-- ÉTAPE 4 : Test -->
+  <!-- ÉTAPE 5 : Tache aveugle / Blind spot -->
+  <section id="step-blindspot" class="step">
+    <div class="bs-eye-side left" id="bs-eye-left" aria-hidden="true">
+      <svg class="eye-open" viewBox="0 0 120 72" focusable="false">
+        <path d="M8 36 C24 12 42 6 60 6 C78 6 96 12 112 36 C96 60 78 66 60 66 C42 66 24 60 8 36 Z"/>
+        <circle cx="60" cy="36" r="15"/>
+        <circle cx="60" cy="36" r="6"/>
+      </svg>
+      <svg class="eye-closed" viewBox="0 0 120 72" focusable="false">
+        <path d="M12 38 C30 56 50 62 70 58 C86 55 99 47 108 36"/>
+        <path d="M34 54 L28 65 M58 60 L57 72 M82 54 L90 65"/>
+      </svg>
+      <span></span>
+    </div>
+    <div class="bs-eye-side right" id="bs-eye-right" aria-hidden="true">
+      <svg class="eye-open" viewBox="0 0 120 72" focusable="false">
+        <path d="M8 36 C24 12 42 6 60 6 C78 6 96 12 112 36 C96 60 78 66 60 66 C42 66 24 60 8 36 Z"/>
+        <circle cx="60" cy="36" r="15"/>
+        <circle cx="60" cy="36" r="6"/>
+      </svg>
+      <svg class="eye-closed" viewBox="0 0 120 72" focusable="false">
+        <path d="M12 38 C30 56 50 62 70 58 C86 55 99 47 108 36"/>
+        <path d="M34 54 L28 65 M58 60 L57 72 M82 54 L90 65"/>
+      </svg>
+      <span></span>
+    </div>
+    <div class="card">
+      <h2 id="blindspot-title"></h2>
+      <div id="blindspot-eye-box"></div>
+      <div id="head-align-card">
+        <svg id="head-align-graphic" viewBox="0 0 420 180" aria-hidden="true" focusable="false">
+          <line class="center-reference" x1="210" y1="0" x2="210" y2="180"/>
+          <rect class="screen-frame" x="118" y="18" width="184" height="104" rx="8"/>
+          <line class="screen-midline" x1="210" y1="18" x2="210" y2="122"/>
+          <circle class="center-dot" cx="210" cy="18" r="8"/>
+          <circle class="head-shape" cx="210" cy="146" r="26"/>
+          <path class="shoulders-shape" d="M152 174 C164 150 185 142 210 142 C235 142 256 150 268 174"/>
+          <line class="align-line" x1="210" y1="122" x2="210" y2="146"/>
+          <path class="side-arrow left" d="M82 146 H158"/>
+          <path class="side-arrow right" d="M338 146 H262"/>
+          <path class="arrow-head left" d="M92 136 L82 146 L92 156"/>
+          <path class="arrow-head right" d="M328 136 L338 146 L328 156"/>
+        </svg>
+        <div>
+          <strong data-i18n="dist.headAlignTitle"></strong>
+          <p data-i18n="dist.headAlignText"></p>
+        </div>
+      </div>
+      <div id="bs-progress-box">
+        <strong id="bs-progress-count">0/3</strong>
+        <span id="bs-progress-text"></span>
+      </div>
+      <p id="blindspot-text"></p>
+      <p class="hint" id="test-distance-note"></p>
+      <div class="bs-controls">
+        <button class="btn" id="btn-bs-start" data-i18n="dist.blindStart"></button>
+      </div>
+      <p class="hint" id="bs-status"></p>
+      <p id="bs-result"></p>
+    </div>
+
+    <div id="bs-zone" hidden>
+      <div id="bs-zone-instruction"></div>
+      <div id="bs-cross">+</div>
+      <div id="bs-dot"></div>
+    </div>
+    <div class="bs-gone-controls" id="bs-gone-controls" hidden>
+      <button class="btn primary" id="btn-bs-gone" data-i18n="dist.blindGone"></button>
+    </div>
+
+    <div class="card controls">
+      <button class="btn primary" id="btn-start-eye-test" data-i18n="dist.startEyeTest" disabled></button>
+      <p class="hint" data-i18n="dist.blindStay"></p>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 6 : Test -->
   <section id="step-test" class="step">
+    <div class="bs-eye-side test-eye-side left" id="test-eye-left-side" aria-hidden="true">
+      <svg class="eye-open" viewBox="0 0 120 72" focusable="false">
+        <path d="M8 36 C24 12 42 6 60 6 C78 6 96 12 112 36 C96 60 78 66 60 66 C42 66 24 60 8 36 Z"/>
+        <circle cx="60" cy="36" r="15"/>
+        <circle cx="60" cy="36" r="6"/>
+      </svg>
+      <svg class="eye-closed" viewBox="0 0 120 72" focusable="false">
+        <path d="M12 38 C30 56 50 62 70 58 C86 55 99 47 108 36"/>
+        <path d="M34 54 L28 65 M58 60 L57 72 M82 54 L90 65"/>
+      </svg>
+      <span></span>
+    </div>
+    <div class="bs-eye-side test-eye-side right" id="test-eye-right-side" aria-hidden="true">
+      <svg class="eye-open" viewBox="0 0 120 72" focusable="false">
+        <path d="M8 36 C24 12 42 6 60 6 C78 6 96 12 112 36 C96 60 78 66 60 66 C42 66 24 60 8 36 Z"/>
+        <circle cx="60" cy="36" r="15"/>
+        <circle cx="60" cy="36" r="6"/>
+      </svg>
+      <svg class="eye-closed" viewBox="0 0 120 72" focusable="false">
+        <path d="M12 38 C30 56 50 62 70 58 C86 55 99 47 108 36"/>
+        <path d="M34 54 L28 65 M58 60 L57 72 M82 54 L90 65"/>
+      </svg>
+      <span></span>
+    </div>
     <div id="test-header">
       <span id="test-eye-label"></span>
       <span id="test-line-label"></span>
     </div>
+    <div id="test-align-warning" data-i18n="test.headAlignReminder"></div>
     <div id="optotype-zone">
       <svg id="optotype" viewBox="0 0 5 5" aria-label="optotype E">
         <g id="optotype-g">
           <path d="M0,0 H5 V1 H1 V2 H5 V3 H1 V4 H5 V5 H0 Z" fill="currentColor"/>
         </g>
       </svg>
+      <div id="letter-optotype" aria-label="letter optotype"></div>
     </div>
-    <div id="answer-pad">
-      <p class="hint">Vers où pointent les branches du E&nbsp;?</p>
+    <div id="answer-pad-e" class="answer-pad">
+      <p class="hint" data-i18n="test.question"></p>
       <div class="arrow-grid">
-        <button class="btn arrow" data-dir="up"    aria-label="haut">▲</button>
-        <button class="btn arrow" data-dir="left"  aria-label="gauche">◀</button>
-        <button class="btn arrow" data-dir="down"  aria-label="bas">▼</button>
-        <button class="btn arrow" data-dir="right" aria-label="droite">▶</button>
+        <button class="btn arrow" data-dir="up"    aria-label="up">▲</button>
+        <button class="btn arrow" data-dir="left"  aria-label="left">◀</button>
+        <button class="btn arrow" data-dir="down"  aria-label="down">▼</button>
+        <button class="btn arrow" data-dir="right" aria-label="right">▶</button>
       </div>
-      <button class="btn ghost" id="btn-cant-see">Je ne vois qu'une tache ✗</button>
+      <button class="btn ghost" id="btn-cant-see" data-i18n="test.cantSee"></button>
+    </div>
+    <div id="answer-pad-letters" class="answer-pad" hidden>
+      <p class="hint" data-i18n="test.letterQuestion"></p>
+      <div id="letter-grid"></div>
+      <button class="btn ghost" id="btn-cant-read" data-i18n="test.cantRead"></button>
     </div>
   </section>
 
-  <!-- Interlude entre les deux yeux -->
+  <!-- Interlude entre les deux yeux / Switch eyes -->
   <section id="step-switch" class="step">
     <div class="card">
-      <h2>Premier œil terminé ✓</h2>
+      <h2 data-i18n="switch.title"></h2>
       <p id="switch-result"></p>
-      <p>Maintenant, couvrez l'<strong>œil droit</strong> et testez l'<strong>œil
-        gauche</strong>. Restez à la même distance.</p>
-      <button class="btn primary" id="btn-eye-left">Tester l'œil gauche</button>
+      <p data-i18n="switch.text"></p>
+      <button class="btn primary" id="btn-eye-left" data-i18n="switch.btn"></button>
     </div>
   </section>
 
-  <!-- ÉTAPE 5 : Résultats -->
+  <!-- ÉTAPE 7 : Résultats / Results -->
   <section id="step-results" class="step">
     <div class="card">
-      <h2>Résultats</h2>
+      <h2 data-i18n="results.title"></h2>
+      <p class="hint" id="results-distance"></p>
       <table id="results-table">
         <thead>
-          <tr><th></th><th>Snellen (m)</th><th>Snellen (pi)</th><th>Décimale</th><th>LogMAR</th></tr>
+          <tr>
+            <th></th>
+            <th data-i18n="results.thSnellenM"></th>
+            <th data-i18n="results.thSnellenFt"></th>
+            <th data-i18n="results.thDecimal"></th>
+            <th>LogMAR</th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
       <p id="results-comment"></p>
-      <div class="warning">
-        ⚠️ Rappel&nbsp;: ceci est une <strong>estimation à titre indicatif seulement</strong>,
-        sensible à la calibration, à la distance réelle, à l'éclairage et à la qualité de
-        l'écran. Seul un examen par un professionnel de la vue est fiable. En cas de doute
-        ou de changement dans votre vision, consultez.
-      </div>
-      <button class="btn primary" id="btn-restart">Refaire le test</button>
+      <div class="warning" data-i18n="results.warning"></div>
+      <button class="btn primary" id="btn-restart" data-i18n="results.restart"></button>
     </div>
   </section>
 
   <footer>
-    <p>Test 100&nbsp;% local — aucune donnée n'est envoyée nulle part.
-       Optotype&nbsp;: E de Snellen (grille 5×5 standard).</p>
+    <p data-i18n="footer.text"></p>
   </footer>
 
   <script src="app.js"></script>
