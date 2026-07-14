@@ -178,7 +178,7 @@ const I18N = {
     commentMid: "Résultat proche de la normale mais pas parfait. Si vous remarquez une gêne au quotidien, un examen professionnel vaut la peine.",
 
     "cam.title": "📷 Suivi caméra (optionnel)",
-    "cam.text": "Activez votre webcam pour que le site surveille votre position en temps réel pendant le test : si vous vous penchez trop vers l'écran ou trop loin en arrière, l'essai en cours ne sera pas compté et vous sera reproposé. L'analyse du visage se fait entièrement dans votre navigateur — aucune image n'est envoyée nulle part — mais le modèle de détection (quelques Mo) est téléchargé depuis un CDN externe au premier lancement.",
+    "cam.text": "Activez votre webcam pour vérifier votre distance à l’écran et l’alignement de votre tête pendant le test. Cela rend le test plus fiable. Si vous êtes trop près, trop loin ou mal aligné, l’essai ne sera pas compté et vous sera reproposé. L’analyse se fait entièrement sur votre appareil avec Google MediaPipe. Aucune image ni donnée de détection n’est envoyée à un serveur.",
     "cam.enable": "Activer la caméra",
     "cam.disable": "Désactiver la caméra",
     "cam.requesting": "Demande d'accès à la caméra…",
@@ -342,7 +342,7 @@ const I18N = {
     commentMid: "Close to normal but not perfect. If you notice discomfort day to day, a professional exam is worth it.",
 
     "cam.title": "📷 Camera tracking (optional)",
-    "cam.text": "Turn on your webcam so the site can monitor your position in real time during the test: if you lean too close to the screen or too far back, the current trial won't be counted and will be asked again. Face analysis runs entirely in your browser — no image is ever sent anywhere — but the detection model (a few MB) is downloaded from an external CDN the first time you enable it.",
+    "cam.text": "Enable your webcam to check your distance from the screen and the alignment of your head during the test. This makes the test more reliable. If you are too close, too far, or not properly aligned, the current trial will not be counted and will be shown again. The analysis runs entirely on your device using Google MediaPipe. No image or detection data is sent to a server.",
     "cam.enable": "Enable camera",
     "cam.disable": "Disable camera",
     "cam.requesting": "Requesting camera access…",
