@@ -10,6 +10,12 @@
   --warn-border: #f0c36d;
 }
 
+@font-face {
+  font-family: "Optician Sans";
+  src: url("assets/Optician-Sans.otf") format("opentype");
+  font-display: block;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #12161b;
@@ -39,6 +45,62 @@ html, body {
 
 .step { display: none; padding: 2rem 1.25rem 3.5rem; }
 .step.active { display: block; }
+
+#step-intro {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+#step-intro .intro-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#step-intro .intro-bg::before,
+#step-intro .intro-bg::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  display: none;
+  width: max(180px, calc((100vw - 860px) / 2));
+  height: 100vh;
+  background-image: url("assets/snellen-chart-site2.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.5;
+  transform: translateY(-50%);
+}
+
+#step-intro .intro-bg::before {
+  left: 0;
+}
+
+#step-intro .intro-bg::after {
+  right: 0;
+}
+
+@media (min-width: 1120px) {
+  #step-intro .intro-bg::before,
+  #step-intro .intro-bg::after {
+    display: block;
+  }
+}
+
+#step-intro .card {
+  position: relative;
+  background: color-mix(in srgb, var(--card-bg) 88%, transparent);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+  box-shadow: 0 18px 44px rgba(25, 34, 44, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+@media (prefers-color-scheme: dark) {
+  #step-intro .card {
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
+  }
+}
 
 .card {
   max-width: 760px;
@@ -234,8 +296,10 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
+#mode-type-choices { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#mode-eyes-choices { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-h3 { font-size: 1.2rem; margin-top: 0; }
+h3 { font-size: 1.2rem; margin-top: 1.4rem; margin-bottom: 0; }
 
 #thumb-zone { text-align: center; padding: 2rem 1rem; }
 #thumb-bar {
@@ -416,8 +480,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
 #bs-progress-text {
   font-weight: 700;
 }
-#bs-status { text-align: center; min-height: 1.2em; }
-#bs-result { text-align: center; }
+/* min-height >= line-height (1.65em), sinon le passage vide->rempli déplace quand même les éléments en dessous */
+#bs-status { text-align: center; min-height: 1.7em; }
+/* Espace réservé fixe : le texte d'avertissement (essai manqué, écart pouce/tache
+   aveugle) apparaît et disparaît dans cette zone sans jamais déplacer le point
+   ou le bouton "Il a disparu" situés juste en dessous. */
+#bs-result { text-align: center; min-height: 3.6em; }
 .bs-warn { color: #c2620a; }
 
 #bs-zone {
@@ -505,6 +573,206 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
   box-shadow: 0 8px 22px rgba(37, 99, 235, 0.24);
 }
 
+/* --- Suivi caméra / camera tracking --- */
+#camera-card {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  margin: 1.25rem 0;
+}
+#camera-card h3 { margin-top: 0; margin-bottom: 0.3rem; }
+#cam-video {
+  width: 160px;
+  height: 120px;
+  border-radius: 8px;
+  background: #000;
+  object-fit: cover;
+  transform: scaleX(-1);
+  margin: 0.7rem 0;
+}
+.cam-controls { margin: 0.4rem 0 0.6rem; }
+#cam-status { min-height: 1.3em; }
+
+#cam-badges {
+  display: flex;
+  justify-content: center;
+  gap: 0.55rem;
+  margin: 0.6rem auto 0;
+  width: min(760px, 100%);
+}
+#cam-badge,
+#cam-badge-angle,
+#cam-badge-eye {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  /* Largeur fixe par badge : quel que soit le message (distance, angle, œil
+     ouvert, tête tournée...), aucun des deux badges ne change jamais de
+     taille et ne peut donc plus déplacer le label de l'œil ou le numéro
+     d'optotype à côté d'eux. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Chiffres à largeur fixe : évite tout micro-tremblement du badge quand la
+     valeur affichée change de chiffre à chaque frame ("0 buffer"). */
+  font-variant-numeric: tabular-nums;
+  /* Rétroaction chaud/froid continue : à la valeur cible, --cam-hue est vert
+     (142) et le badge 100% opaque ; l'écart le fait glisser vers l'orange/rouge
+     et devenir plus transparent (opacité fixée en JS, jamais sous 40%). */
+  background: hsl(var(--cam-hue, 142) 65% 90%);
+  color: hsl(var(--cam-hue, 142) 60% 26%);
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+#cam-badge { width: 9.2rem; }
+#cam-badge-angle { width: 7rem; }
+#cam-badge-eye { width: 11rem; }
+@media (prefers-color-scheme: dark) {
+  #cam-badge,
+  #cam-badge-angle,
+  #cam-badge-eye {
+    background: hsl(var(--cam-hue, 142) 40% 20%);
+    color: hsl(var(--cam-hue, 142) 65% 72%);
+  }
+}
+#cam-badge.eye-warn,
+#cam-badge-angle.eye-warn,
+#cam-badge-eye.eye-warn { background: #fecaca; color: #991b1b; }
+@media (prefers-color-scheme: dark) {
+  #cam-badge.eye-warn,
+  #cam-badge-angle.eye-warn,
+  #cam-badge-eye.eye-warn { background: #4a1414; color: #ff9c9c; }
+}
+
+#cam-eye-hint-bs { min-height: 3.3em; color: #9c3b0a; font-weight: 700; }
+@media (prefers-color-scheme: dark) {
+  #cam-eye-hint-bs { color: #ffb27a; }
+}
+
+#cam-reject-banner {
+  max-width: 760px;
+  width: 100%;
+  margin: 0.75rem auto 0;
+  padding: 0.85rem 1rem;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* --- Distance manuelle / manual distance entry --- */
+#manual-distance-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.6rem 0;
+}
+#manual-distance-input {
+  font: inherit;
+  font-size: 1.3rem;
+  font-weight: 700;
+  width: 7rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--fg);
+}
+#manual-distance-input-row span { font-size: 1.1rem; color: var(--muted); }
+#manual-distance-warning { min-height: 1.7em; color: #9c3b0a; font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  #manual-distance-warning { color: #ffb27a; }
+}
+
+/* --- Tableau Snellen complet / full chart --- */
+#chart-header {
+  display: flex;
+  justify-content: center;
+  max-width: 760px;
+  width: 100%;
+  margin: 1.5rem auto 0.5rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+#chart-instructions {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto 0.75rem;
+}
+#chart-precision-note {
+  text-align: center;
+  max-width: 760px;
+  min-height: 1.7em;
+  margin: 0 auto 0.75rem;
+}
+#chart-scroll {
+  max-height: 60vh;
+  overflow-y: auto;
+  overflow-x: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  max-width: 900px;
+  width: calc(100% - 2.5rem);
+  margin: 0 auto 1rem;
+  padding: 1.5rem 1rem;
+  touch-action: pan-y;
+}
+.chart-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.4em 1rem;
+}
+.chart-row-letters {
+  flex: 1 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  color: #000000;
+  font-family: "Optician Sans", Arial, Helvetica, sans-serif;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+}
+.chart-row-letters span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.chart-row-label {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  white-space: nowrap;
+}
+.chart-row-index {
+  min-width: 1.1rem;
+  font-size: 0.75rem;
+  color: #c2c8ce;
+  text-align: right;
+}
+.chart-row-frac {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #6b7480;
+}
+#chart-line-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin: 0.6rem 0;
+}
+.btn.chart-line { min-width: 4.5rem; }
+
 /* --- Test --- */
 #step-test { min-height: 90vh; display: none; flex-direction: column; }
 #step-test.active { display: flex; }
@@ -533,6 +801,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
   text-align: center;
 }
 
+#test-precision-note {
+  max-width: 760px;
+  width: 100%;
+  margin: 0.6rem auto 0;
+  min-height: 1.7em;
+  text-align: center;
+}
+
 #optotype-zone {
   flex: 1;
   display: flex;
@@ -546,6 +822,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
   max-width: 900px;
   width: 100%;
   margin: 1rem auto;
+  touch-action: none;
 }
 #optotype { display: block; }
 #letter-optotype {
@@ -553,8 +830,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
   align-items: center;
   justify-content: center;
   color: #000000;
-  font-family: Arial, Helvetica, sans-serif;
-  font-weight: 700;
+  font-family: "Optician Sans", Arial, Helvetica, sans-serif;
+  font-weight: 400;
   line-height: 1;
   text-align: center;
   user-select: none;

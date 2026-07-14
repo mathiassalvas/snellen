@@ -9,27 +9,37 @@ const THUMB_ANGLE_DEG = 2;     // pouce à bout de bras ≈ 2° / thumb at arm's
 const BLINDSPOT_ANGLE_DEG = 13.5; // bord proche de la tache aveugle / near edge of blind spot
 const ARCMIN_5 = (5 / 60) * Math.PI / 180; // 5 minutes d'arc en radians
 
-// Lignes du test : dénominateurs Snellen en base 6 m (6/60 ... 6/4)
-const LINES = [60, 36, 24, 18, 12, 9, 7.5, 6, 5, 4];
+// Lignes du test : dénominateurs Snellen en base 6 m (6/60 ... 6/2.4).
+// Les petites lignes utilisent les conversions exactes des fractions en pieds :
+// 20/15 -> 6/4.5, 20/13 -> 6/3.9, 20/10 -> 6/3, 20/8 -> 6/2.4.
+const LINES = [60, 36, 24, 18, 12, 9, 7.5, 6, 4.5, 3.9, 3, 2.4];
 const TRIALS_PER_LINE = 5;
 const PASS_THRESHOLD = 3; // >= 3 bonnes réponses sur 5 pour passer la ligne
 
 // Équivalents 20 pieds usuels / usual 20-ft equivalents
-const FEET_EQUIV = { 60: 200, 36: 120, 24: 80, 18: 60, 12: 40, 9: 30, 7.5: 25, 6: 20, 5: 16, 4: 13 };
+const FEET_EQUIV = { 60: 200, 36: 120, 24: 80, 18: 60, 15: 50, 12: 40, 9: 30, 7.5: 25, 6: 20, 4.5: 15, 3.9: 13, 3: 10, 2.4: 8 };
 
-const BS_TRIALS = 3; // nombre de mesures de la tache aveugle / blind-spot trials
-const LETTERS = ["C", "D", "E", "F", "L", "N", "O", "P", "T", "Z"];
+// Lignes du mode "tableau Snellen" : 20/50, 20/40, 20/30, 20/25, 20/20, 20/15,
+// 20/13, 20/10, 20/8 — converties en dénominateurs base 6 m (feet × 6/20) pour
+// réutiliser telle quelle toute la géométrie existante (optotypeHeightPx, etc.).
+const CHART_LINES = [15, 12, 9, 7.5, 6, 4.5, 3.9, 3, 2.4];
+
+const BS_TRIALS = 5; // essais par œil ; on retire le min et le max, puis on moyenne le reste
+const BS_MISMATCH_PCT = 30; // écart pouce/tache-aveugle au-delà duquel on avertit l'utilisateur
+const LETTERS = ["C", "D", "H", "K", "N", "O", "R", "S", "V", "Z"];
+const LETTER_OPTOTYPE_FONT = '"Optician Sans", Arial, Helvetica, sans-serif';
+const LETTER_METRIC_FONT_SIZE = 200;
 
 /* ============================================================
  * Internationalisation FR / EN
  * ============================================================ */
 const I18N = {
   fr: {
-    "intro.title": "👁️ Test de Snellen à la maison",
+    "intro.title": "👁️ Test Snellen - Mathias",
     "intro.lead": "Estimez votre acuité visuelle depuis chez vous, en trois étapes :",
     "intro.step1": "<strong>Calibration</strong> — mesurez votre écran avec une carte de crédit",
     "intro.step2": "<strong>Distance</strong> — vérifiée avec votre pouce <em>et</em> votre tache aveugle",
-    "intro.step3": "<strong>Test</strong> — choisissez entre les « E » directionnels et les lettres classiques",
+    "intro.step3": "<strong>Test</strong> — tableau Snellen, « E » directionnels ou lettres Sloan, un œil ou les deux",
     "intro.warning": "⚠️ <strong>Ce test n'est pas un examen médical.</strong> Il donne seulement une estimation approximative de votre acuité visuelle. Il ne remplace en aucun cas une consultation chez un optométriste ou un ophtalmologiste. Consultez un professionnel pour tout problème de vision.",
     "intro.need": "Il vous faut : une carte de crédit (ou toute carte au format standard), un endroit où reculer d'environ 2 mètres, et quelque chose pour couvrir un œil.",
     "intro.start": "Commencer",
@@ -40,6 +50,7 @@ const I18N = {
     "cal.larger": "+ plus grand",
     "cal.tip": "Astuce : alignez le coin inférieur gauche de la carte avec celui du rectangle, puis ajustez jusqu'à ce que les bords droit et supérieur coïncident. Les flèches gauche/droite du clavier rapetissent ou agrandissent aussi le rectangle.",
     "cal.done": "Le rectangle correspond à ma carte ✓",
+    zoomChangedWarning: "⚠️ Le zoom du navigateur a changé depuis la calibration. Remettez le zoom à 100 % ou recalibrez l'écran avant de lire les lettres.",
 
     "dist.title": "Étape 2 — Distance de vision",
     "dist.choose": "Placez-vous le plus loin possible de l'écran, tout en pouvant encore toucher la barre d'espace et utiliser votre souris ou votre pavé tactile sans avancer.",
@@ -60,27 +71,45 @@ const I18N = {
     "dist.startEyeTest": "Commencer le test de cet œil",
 
     "mode.title": "Étape 3 — Type de test",
-    "mode.text": "Les deux options utilisent les mêmes niveaux de taille. Choisissez celle que vous voulez faire.",
+    "mode.text": "Choisissez le type de test, puis si vous testez un œil à la fois, les deux ensemble, ou le test complet.",
+    "mode.typeLabel": "Type de test",
+    "mode.chartTitle": "Tableau Snellen",
+    "mode.chartText": "Tableau complet affiché en une fois, à une distance que vous mesurez vous-même (idéalement ≥ 150 cm). Vous (ou un proche) lisez la plus petite ligne possible.",
     "mode.eTitle": "E directionnel",
-    "mode.eText": "Le E tourne; vous indiquez la direction de ses branches.",
+    "mode.eText": "Recommandé — le E tourne; vous indiquez la direction de ses branches.",
     "mode.lettersTitle": "Lettres classiques",
-    "mode.lettersText": "Une lettre apparaît; vous choisissez ou tapez la lettre vue.",
+    "mode.lettersText": "Une lettre Sloan apparaît avec une police optotype; vous choisissez ou tapez la lettre vue.",
+    "mode.eyesLabel": "Yeux",
+    "mode.monoTitle": "Un œil à la fois",
+    "mode.monoText": "Un résultat séparé par œil — plus précis, deux fois plus long.",
+    "mode.biTitle": "Deux yeux ensemble",
+    "mode.biText": "Un seul résultat rapide, pour vérifier que la vision est ≥ 20/40.",
+    "mode.completeTitle": "Test complet",
+    "mode.completeText": "Recommandé — trois résultats : œil droit, œil gauche, puis les deux yeux ensemble.",
     "mode.next": "Continuer",
 
-    "eye.title": "Étape 4 — Préparation du test",
-    "eye.p1": "Le test se fait <strong>un œil à la fois</strong>. Couvrez l'autre œil avec la paume de la main (sans appuyer) ou un cache. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
-    "eye.p2": "Selon le mode choisi, vous verrez soit un « E » tourné dans une des quatre directions, soit une lettre classique. Répondez avec le clavier ou les boutons à l'écran. Si vous ne voyez pas bien, devinez !",
+    "eye.title": "Étape — Préparation du test",
+    "eye.p1Mono": "Le test se fait <strong>un œil à la fois</strong>. Couvrez l'autre œil avec la paume de la main (sans appuyer) ou un cache. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
+    "eye.p1Bi": "Le test se fait avec <strong>les deux yeux ouverts</strong> en même temps, sans rien couvrir. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
+    "eye.p1Complete": "Le test complet se fait en trois passes : <strong>œil droit</strong>, <strong>œil gauche</strong>, puis <strong>les deux yeux ensemble</strong>. Gardez vos lunettes ou lentilles si vous en portez habituellement.",
+    "eye.p2Interactive": "Un « E » tourné ou une lettre classique va s'afficher, de plus en plus petit. Répondez avec le clavier ou les boutons à l'écran. Si vous ne voyez pas bien, devinez !",
+    "eye.p2Chart": "Un tableau complet va s'afficher, du plus grand au plus petit. Lisez-le de haut en bas et indiquez la plus petite ligne que vous pouvez encore lire confortablement.",
     "eye.startRight": "Commencer — œil droit<br><small>(couvrez l'œil gauche)</small>",
+    "eye.startBoth": "Commencer le test",
 
     "test.question": "Vers où pointent les branches du E ?",
     "test.headAlignReminder": "Gardez votre tête alignée avec le centre de l'écran et immobile pendant tout le test.",
+    precisionCapNote: (fraction) => `ℹ️ Écran ou distance limités : à partir de ${fraction}, les lettres peuvent être moins nettes. Le test continue, mais le résultat final en tiendra compte.`,
     "test.cantSee": "Je ne vois qu'une tache ✗",
     "test.letterQuestion": "Quelle lettre voyez-vous ?",
     "test.cantRead": "Je ne peux pas lire la lettre ✗",
 
     "switch.title": "Premier œil terminé ✓",
-    "switch.text": "Maintenant, couvrez l'<strong>œil droit</strong>. On va refaire la mesure de la tache aveugle avant de tester l'<strong>œil gauche</strong>, au cas où votre position aurait un peu changé.",
+    "switch.textBlindspot": "Maintenant, couvrez l'<strong>œil droit</strong>. On va refaire la mesure de la tache aveugle avant de tester l'<strong>œil gauche</strong>, au cas où votre position aurait un peu changé.",
+    "switch.textChart": "Maintenant, couvrez l'<strong>œil droit</strong> et lisez à nouveau le tableau avec l'<strong>œil gauche</strong>, à la même distance.",
+    "switch.textBoth": "Dernière passe : ouvrez <strong>les deux yeux</strong>. Gardez la même distance et continuez sans couvrir un œil.",
     "switch.btn": "Tester l'œil gauche",
+    "switch.btnBoth": "Tester les deux yeux",
 
     "results.title": "Résultats",
     "results.thSnellenM": "Snellen (m)",
@@ -88,30 +117,46 @@ const I18N = {
     "results.thDecimal": "Décimale",
     "results.warning": "⚠️ Rappel : ceci est une <strong>estimation à titre indicatif seulement</strong>, sensible à la calibration, à la distance réelle, à l'éclairage et à la qualité de l'écran. Seul un examen par un professionnel de la vue est fiable. En cas de doute ou de changement dans votre vision, consultez.",
     "results.restart": "Refaire le test",
+    "results.precisionTitle": "Limite de rendu de l'écran",
 
-    "footer.text": "Test 100 % local — aucune donnée n'est envoyée nulle part. Optotypes : E de Snellen et lettres classiques.",
+    "footer.text": "Test 100 % local — aucune donnée n'est envoyée nulle part. Optotypes : E de Snellen et lettres Sloan.",
+
+    "manual.title": "Étape — Distance mesurée",
+    "manual.text": "Avec un ruban ou un mètre, mesurez la distance réelle entre vos yeux et l'écran, puis entrez-la ci-dessous. Au moins 150 cm est recommandé pour une bonne précision — plus c'est loin, mieux c'est.",
+    "manual.inputLabel": "Distance mesurée",
+    "manual.next": "Continuer",
+
+    "chart.question": "Quelle est la plus petite ligne que vous pouvez lire confortablement (au moins 3 lettres sur 5) ?",
+    "chart.none": "Aucune ligne n'est lisible ✗",
+    "chart.instructions": "Lisez le tableau ci-dessous de haut en bas, puis indiquez la plus petite ligne que vous pouvez encore lire.",
 
     // Chaînes dynamiques
-    eyeRightLabel: "Œil droit ouvert (œil gauche fermé)",
-    eyeLeftLabel: "Œil gauche ouvert (œil droit fermé)",
-    blindTitle: (measureEye, testEye) => `Tache aveugle — mesure avec l'${measureEye === "right" ? "œil droit" : "œil gauche"} (${testEye === "right" ? "test de l'œil droit" : "test de l'œil gauche"})`,
+    manualWarningShort: (cm) => `⚠️ ${cm} cm, c'est assez proche — le résultat sera moins précis. Si possible, reculez-vous.`,
+    chartEyeBoth: "Deux yeux ouverts",
+    chartEyeMono: (eye) => `Œil ${eye === "right" ? "droit" : "gauche"} ouvert (${eye === "right" ? "gauche" : "droit"} fermé)`,
+    eyeRightLabel: "Test : œil droit (gauche fermé)",
+    eyeLeftLabel: "Test : œil gauche (droit fermé)",
+    bothEyesOpenLabel: "Deux yeux ouverts",
+    blindTitle: (measureEye, testEye) => `Tache aveugle — mesure avec l'${measureEye === "right" ? "œil droit" : "œil gauche"} (${testEye === "both" ? "test des deux yeux" : testEye === "right" ? "test de l'œil droit" : "test de l'œil gauche"})`,
     blindEyeBox: (openEye, closedEye) => `Ouvrez l'${openEye}. Fermez l'${closedEye}.`,
-    blindText: (closedEye, openEye, fixSide, direction) => `On mesure la distance avec les deux yeux pour être plus précis. <strong>Fermez l'${closedEye}</strong> et gardez <strong>l'${openEye} ouvert</strong>. Fixez la croix <strong>+</strong> située à ${fixSide} avec l'œil ouvert, <em>sans bouger les yeux</em>. Le point va se déplacer vers ${direction} : cliquez ou appuyez sur <strong>Espace</strong> à l'instant où il disparaît. On répète 3 fois.`,
+    blindText: (closedEye, openEye, fixSide, direction) => `On mesure la distance avec les deux yeux pour être plus précis. <strong>Fermez l'${closedEye}</strong> et gardez <strong>l'${openEye} ouvert</strong>. Fixez la croix <strong>+</strong> située à ${fixSide} avec l'œil ouvert, <em>sans bouger les yeux</em>. Le point va se déplacer vers ${direction} : cliquez ou appuyez sur <strong>Espace</strong> à l'instant où il disparaît. On répète ${BS_TRIALS} fois.`,
     blindZoneInstruction: (closedEye, openEye, fixSide) => `Fermez l'${closedEye}. Fixez la croix à ${fixSide} avec l'${openEye}.`,
     eyeOpenShort: "ouvert",
     eyeClosedShort: "fermé",
     bsProgressText: "mesures faites",
     bsSwitchEye: "Changez d'œil, puis démarrez la prochaine mesure.",
-    startEyeTestLabel: (eye) => `Commencer le test de l'${eye === "right" ? "œil droit" : "œil gauche"}`,
+    startEyeTestLabel: (eye) => eye === "both" ? "Commencer le test (deux yeux)" : `Commencer le test de l'${eye === "right" ? "œil droit" : "œil gauche"}`,
     lineLabel: (d, i, n) => `Ligne 6/${fmt(d)} — optotype ${i}/${n}`,
     thumbCaption: (cm, m) => `Barre de ${cm} cm — votre pouce doit la couvrir exactement quand vous êtes à ${m} m.`,
     bsTrial: (i, n) => `Mesure ${i}/${n} — fixez la croix, Espace ou clic dès que le point disparaît.`,
-    bsEdge: (m) => `Le point a atteint le bord de l'écran sans disparaître — soit vous êtes à plus de ~${m} m (écran trop étroit pour mesurer), soit l'œil a quitté la croix. Essai ignoré.`,
+    bsEdge: (m) => `⚠️ Essai manqué (max mesurable ici : ~${m} m) — on reprend.`,
+    bsTooFar: "⚠️ Point rendu trop loin selon l'estimation au pouce — on reprend.",
     bsResult: (m) => `Distance mesurée par la tache aveugle : environ <strong>${m} m</strong>.`,
     bsOneDone: (eye, m) => `Mesure avec l'${eye === "right" ? "œil droit" : "œil gauche"} : environ <strong>${m} m</strong>. Mesurez maintenant l'autre œil.`,
     bsOneInvalid: (eye) => `Mesure avec l'${eye === "right" ? "œil droit" : "œil gauche"} non valide. Mesurez maintenant l'autre œil.`,
     bsBothResult: (r, l, avg) => `Distance mesurée — œil droit : ${r}; œil gauche : ${l}. Moyenne utilisée : <strong>${avg} m</strong>.`,
     bsCompare: (pct, target) => ` Écart de ${pct} % par rapport à l'estimation au pouce de ${target} m.`,
+    bsMismatchWarning: (pct) => `⚠️ Écart important (${pct} %) entre l'estimation au pouce et la tache aveugle. Vérifiez que vous fixez bien la croix sans bouger les yeux, ou refaites la mesure.`,
     bsNone: "Aucune mesure valide — refaites la mesure de la tache aveugle pour commencer le test.",
     bsRequired: "Faites d'abord la mesure de la tache aveugle pour confirmer la distance.",
     useMeasured: (m) => `✓ Le test utilisera la distance mesurée : ${m} m.`,
@@ -123,18 +168,42 @@ const I18N = {
     rowWorse: "Moins que 6/60 — impossible d'estimer avec ce test",
     rightEye: "Œil droit",
     leftEye: "Œil gauche",
+    bothEyes: "Deux yeux",
     resultsDistance: (r, l) => `Distance utilisée — œil droit : ${r} m; œil gauche : ${l} m.`,
+    resultsDistanceBoth: (m) => `Distance utilisée : ${m} m.`,
+    resultsDistanceComplete: (r, l, b) => `Distance utilisée — œil droit : ${r} m; œil gauche : ${l} m; deux yeux : ${b} m.`,
+    resultsPrecisionWarning: (items) => `ℹ️ Pour ${items}, certaines lettres étaient près de la limite de pixels de votre écran à cette distance. Un échec aux plus petites lignes peut donc être expliqué en partie par l'affichage, pas seulement par la vision.`,
     commentGood: "Les deux yeux atteignent 6/6 (20/20) ou mieux dans ce test — c'est la vision dite « normale ».",
     commentBad: "Au moins un œil est nettement en dessous de 6/12 dans ce test. C'est une bonne raison de prendre rendez-vous chez un professionnel de la vue.",
     commentMid: "Résultat proche de la normale mais pas parfait. Si vous remarquez une gêne au quotidien, un examen professionnel vaut la peine.",
+
+    "cam.title": "📷 Suivi caméra (optionnel)",
+    "cam.text": "Activez votre webcam pour que le site surveille votre position en temps réel pendant le test : si vous vous penchez trop vers l'écran ou trop loin en arrière, l'essai en cours ne sera pas compté et vous sera reproposé. L'analyse du visage se fait entièrement dans votre navigateur — aucune image n'est envoyée nulle part — mais le modèle de détection (quelques Mo) est téléchargé depuis un CDN externe au premier lancement.",
+    "cam.enable": "Activer la caméra",
+    "cam.disable": "Désactiver la caméra",
+    "cam.requesting": "Demande d'accès à la caméra…",
+    "cam.loadingModel": "Chargement du modèle de détection de visage…",
+    "cam.tracking": "✓ Suivi actif — restez dans cette position.",
+    "cam.denied": "Accès caméra refusé. Vous pouvez continuer sans ce suivi.",
+    "cam.error": "Le suivi caméra n'a pas pu démarrer (modèle indisponible ou navigateur non compatible). Vous pouvez continuer sans lui.",
+    "cam.noFace": "📷 Visage non détecté",
+    "cam.headAngled": "🧭 Angle horiz.",
+    "cam.tooFar": "📷 Trop loin",
+    "cam.tooClose": "📷 Trop proche",
+    "cam.eyesUnknown": "👁️ Suivez la consigne d'œil",
+    "cam.rejectedTrial": "⚠️ Vous vous êtes trop rapproché ou éloigné — reprenez votre position et réessayez.",
+    camLiveDistance: (m) => `📷 ≈ ${m} m`,
+    camLiveAngle: (deg) => `🧭 horiz. ${deg}°`,
+    camEyeInstruction: (openSide, closedSide) => `👁️ ${openSide === "left" ? "G" : "D"} ouvert / ${closedSide === "left" ? "G" : "D"} fermé`,
+    camBothEyesInstruction: "👁️ 2 yeux ouverts",
   },
 
   en: {
-    "intro.title": "👁️ Home Snellen Test",
+    "intro.title": "👁️ Test Snellen - Mathias",
     "intro.lead": "Estimate your visual acuity from home, in three steps:",
     "intro.step1": "<strong>Calibration</strong> — measure your screen with a credit card",
     "intro.step2": "<strong>Distance</strong> — checked with your thumb <em>and</em> your blind spot",
-    "intro.step3": "<strong>Test</strong> — choose between tumbling “E” and regular letters",
+    "intro.step3": "<strong>Test</strong> — Snellen chart, tumbling “E”, or Sloan letters, one eye or both",
     "intro.warning": "⚠️ <strong>This is not a medical exam.</strong> It only gives a rough estimate of your visual acuity and is no substitute for a visit to an optometrist or ophthalmologist. See a professional for any vision concern.",
     "intro.need": "You will need: a credit card (or any standard-size card), room to step back about 2 metres (6–7 ft), and something to cover one eye.",
     "intro.start": "Start",
@@ -145,6 +214,7 @@ const I18N = {
     "cal.larger": "+ larger",
     "cal.tip": "Tip: line up the bottom-left corner of the card with the rectangle's, then adjust until the right and top edges match. The keyboard left/right arrows also shrink or enlarge the rectangle.",
     "cal.done": "The rectangle matches my card ✓",
+    zoomChangedWarning: "⚠️ Browser zoom changed after calibration. Reset zoom to 100% or recalibrate the screen before reading the letters.",
 
     "dist.title": "Step 2 — Viewing distance",
     "dist.choose": "Move as far from the screen as possible while still being able to press Space and use your mouse or trackpad without leaning forward.",
@@ -165,27 +235,45 @@ const I18N = {
     "dist.startEyeTest": "Start this eye's test",
 
     "mode.title": "Step 3 — Test type",
-    "mode.text": "Both options use the same size levels. Choose the one you want to take.",
+    "mode.text": "Choose the test type, then whether you're testing one eye at a time, both together, or the complete test.",
+    "mode.typeLabel": "Test type",
+    "mode.chartTitle": "Snellen chart",
+    "mode.chartText": "Full chart shown at once, at a distance you measure yourself (ideally ≥ 150 cm). You (or a helper) read the smallest line possible.",
     "mode.eTitle": "Tumbling E",
-    "mode.eText": "The E rotates; you report which way its prongs point.",
+    "mode.eText": "Recommended — the E rotates; you report which way its prongs point.",
     "mode.lettersTitle": "Regular letters",
-    "mode.lettersText": "A letter appears; choose or type the letter you see.",
+    "mode.lettersText": "A Sloan letter appears in an optotype font; choose or type the letter you see.",
+    "mode.eyesLabel": "Eyes",
+    "mode.monoTitle": "One eye at a time",
+    "mode.monoText": "A separate result per eye — more precise, takes twice as long.",
+    "mode.biTitle": "Both eyes together",
+    "mode.biText": "One quick result, to check vision is ≥ 20/40.",
+    "mode.completeTitle": "Complete test",
+    "mode.completeText": "Recommended — three results: right eye, left eye, then both eyes together.",
     "mode.next": "Continue",
 
-    "eye.title": "Step 4 — Getting ready",
-    "eye.p1": "The test is done <strong>one eye at a time</strong>. Cover the other eye with your palm (without pressing) or an occluder. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
-    "eye.p2": "Depending on the chosen mode, you will see either an “E” rotated in one of four directions or a regular letter. Answer with the keyboard or the on-screen buttons. If you can't see it clearly, guess!",
+    "eye.title": "Step — Getting ready",
+    "eye.p1Mono": "The test is done <strong>one eye at a time</strong>. Cover the other eye with your palm (without pressing) or an occluder. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
+    "eye.p1Bi": "The test is done with <strong>both eyes open</strong> at the same time, nothing covered. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
+    "eye.p1Complete": "The complete test has three passes: <strong>right eye</strong>, <strong>left eye</strong>, then <strong>both eyes together</strong>. Keep your glasses or contacts if you normally wear them.",
+    "eye.p2Interactive": "A rotated “E” or a regular letter will appear, getting smaller each time. Answer with the keyboard or the on-screen buttons. If you can't see it clearly, guess!",
+    "eye.p2Chart": "A full chart will appear, from biggest to smallest. Read it top to bottom and report the smallest line you can still read comfortably.",
     "eye.startRight": "Start — right eye<br><small>(cover your left eye)</small>",
+    "eye.startBoth": "Start the test",
 
     "test.question": "Which way do the prongs of the E point?",
     "test.headAlignReminder": "Keep your head aligned with the center of the screen and still throughout the test.",
+    precisionCapNote: (fraction) => `ℹ️ Screen or distance limited: from ${fraction} onward, letters may be less sharp. The test continues, but the final result will note it.`,
     "test.cantSee": "I only see a blur ✗",
     "test.letterQuestion": "Which letter do you see?",
     "test.cantRead": "I can't read the letter ✗",
 
     "switch.title": "First eye done ✓",
-    "switch.text": "Now cover your <strong>right eye</strong>. We will measure the blind spot again before testing the <strong>left eye</strong>, in case your position changed a little.",
+    "switch.textBlindspot": "Now cover your <strong>right eye</strong>. We will measure the blind spot again before testing the <strong>left eye</strong>, in case your position changed a little.",
+    "switch.textChart": "Now cover your <strong>right eye</strong> and read the chart again with your <strong>left eye</strong>, at the same distance.",
+    "switch.textBoth": "Final pass: open <strong>both eyes</strong>. Keep the same distance and continue without covering either eye.",
     "switch.btn": "Test the left eye",
+    "switch.btnBoth": "Test both eyes",
 
     "results.title": "Results",
     "results.thSnellenM": "Snellen (m)",
@@ -193,30 +281,46 @@ const I18N = {
     "results.thDecimal": "Decimal",
     "results.warning": "⚠️ Reminder: this is an <strong>estimate for information only</strong>, sensitive to calibration, actual distance, lighting and screen quality. Only an exam by an eye-care professional is reliable. If in doubt, or if your vision changes, get checked.",
     "results.restart": "Take the test again",
+    "results.precisionTitle": "Screen rendering limit",
 
-    "footer.text": "Runs 100% locally — no data is sent anywhere. Optotypes: Snellen E and regular letters.",
+    "footer.text": "Runs 100% locally — no data is sent anywhere. Optotypes: Snellen E and Sloan letters.",
+
+    "manual.title": "Step — Measured distance",
+    "manual.text": "Using a tape measure, measure the real distance between your eyes and the screen, then enter it below. At least 150 cm is recommended for good accuracy — farther is better.",
+    "manual.inputLabel": "Measured distance",
+    "manual.next": "Continue",
+
+    "chart.question": "What's the smallest line you can read comfortably (at least 3 of 5 letters)?",
+    "chart.none": "No line is readable ✗",
+    "chart.instructions": "Read the chart below top to bottom, then report the smallest line you can still read.",
 
     // Dynamic strings
-    eyeRightLabel: "Right eye open (left eye closed)",
-    eyeLeftLabel: "Left eye open (right eye closed)",
-    blindTitle: (measureEye, testEye) => `Blind spot — measuring with the ${measureEye === "right" ? "right eye" : "left eye"} (${testEye === "right" ? "right-eye test" : "left-eye test"})`,
+    manualWarningShort: (cm) => `⚠️ ${cm} cm is quite close — the result will be less precise. If possible, move farther back.`,
+    chartEyeBoth: "Both eyes open",
+    chartEyeMono: (eye) => `${eye === "right" ? "Right" : "Left"} eye open (${eye === "right" ? "left" : "right"} closed)`,
+    eyeRightLabel: "Test: right eye (left closed)",
+    eyeLeftLabel: "Test: left eye (right closed)",
+    bothEyesOpenLabel: "Both eyes open",
+    blindTitle: (measureEye, testEye) => `Blind spot — measuring with the ${measureEye === "right" ? "right eye" : "left eye"} (${testEye === "both" ? "both-eyes test" : testEye === "right" ? "right-eye test" : "left-eye test"})`,
     blindEyeBox: (openEye, closedEye) => `Open your ${openEye}. Close your ${closedEye}.`,
-    blindText: (closedEye, openEye, fixSide, direction) => `We measure distance with both eyes for better precision. <strong>Close your ${closedEye}</strong> and keep your <strong>${openEye} open</strong>. Stare at the <strong>+</strong> cross on the ${fixSide} with the open eye, <em>without moving your eyes</em>. The dot will move ${direction}: click or press <strong>Space</strong> the instant it disappears. We repeat 3 times.`,
+    blindText: (closedEye, openEye, fixSide, direction) => `We measure distance with both eyes for better precision. <strong>Close your ${closedEye}</strong> and keep your <strong>${openEye} open</strong>. Stare at the <strong>+</strong> cross on the ${fixSide} with the open eye, <em>without moving your eyes</em>. The dot will move ${direction}: click or press <strong>Space</strong> the instant it disappears. We repeat ${BS_TRIALS} times.`,
     blindZoneInstruction: (closedEye, openEye, fixSide) => `Close your ${closedEye}. Stare at the cross on the ${fixSide} with your ${openEye}.`,
     eyeOpenShort: "open",
     eyeClosedShort: "closed",
     bsProgressText: "measurements done",
     bsSwitchEye: "Switch eyes, then start the next measurement.",
-    startEyeTestLabel: (eye) => `Start the ${eye === "right" ? "right-eye" : "left-eye"} test`,
+    startEyeTestLabel: (eye) => eye === "both" ? "Start the test (both eyes)" : `Start the ${eye === "right" ? "right-eye" : "left-eye"} test`,
     lineLabel: (d, i, n) => `Line 6/${fmt(d)} — optotype ${i}/${n}`,
     thumbCaption: (cm, m) => `${cm} cm bar — your thumb should cover it exactly when you are ${m} m away.`,
     bsTrial: (i, n) => `Measure ${i}/${n} — stare at the cross, press Space or click as soon as the dot disappears.`,
-    bsEdge: (m) => `The dot reached the edge of the screen without disappearing — either you are farther than ~${m} m (screen too narrow to measure), or your eye left the cross. Trial discarded.`,
+    bsEdge: (m) => `⚠️ Missed that trial (max measurable here: ~${m} m) — trying again.`,
+    bsTooFar: "⚠️ The dot went too far based on the thumb estimate — trying again.",
     bsResult: (m) => `Distance measured via the blind spot: about <strong>${m} m</strong>.`,
     bsOneDone: (eye, m) => `Measurement with the ${eye === "right" ? "right eye" : "left eye"}: about <strong>${m} m</strong>. Now measure the other eye.`,
     bsOneInvalid: (eye) => `Measurement with the ${eye === "right" ? "right eye" : "left eye"} was not valid. Now measure the other eye.`,
     bsBothResult: (r, l, avg) => `Measured distance — right eye: ${r}; left eye: ${l}. Average used: <strong>${avg} m</strong>.`,
     bsCompare: (pct, target) => ` That is ${pct}% away from the ${target} m thumb estimate.`,
+    bsMismatchWarning: (pct) => `⚠️ Large gap (${pct}%) between the thumb estimate and the blind-spot measurement. Make sure you're staring at the cross without moving your eyes, or measure again.`,
     bsNone: "No valid measurement — repeat the blind-spot measurement to start the test.",
     bsRequired: "Complete the blind-spot measurement first to confirm the distance.",
     useMeasured: (m) => `✓ The test will use the measured distance: ${m} m.`,
@@ -228,10 +332,34 @@ const I18N = {
     rowWorse: "Worse than 6/60 — cannot be estimated with this test",
     rightEye: "Right eye",
     leftEye: "Left eye",
+    bothEyes: "Both eyes",
     resultsDistance: (r, l) => `Distance used — right eye: ${r} m; left eye: ${l} m.`,
+    resultsDistanceBoth: (m) => `Distance used: ${m} m.`,
+    resultsDistanceComplete: (r, l, b) => `Distance used — right eye: ${r} m; left eye: ${l} m; both eyes: ${b} m.`,
+    resultsPrecisionWarning: (items) => `ℹ️ For ${items}, some letters were close to your screen's pixel limit at this distance. Failing the smallest lines may therefore be partly explained by display rendering, not only by vision.`,
     commentGood: "Both eyes reach 6/6 (20/20) or better on this test — that is so-called “normal” vision.",
     commentBad: "At least one eye is clearly below 6/12 on this test. That is a good reason to book an appointment with an eye-care professional.",
     commentMid: "Close to normal but not perfect. If you notice discomfort day to day, a professional exam is worth it.",
+
+    "cam.title": "📷 Camera tracking (optional)",
+    "cam.text": "Turn on your webcam so the site can monitor your position in real time during the test: if you lean too close to the screen or too far back, the current trial won't be counted and will be asked again. Face analysis runs entirely in your browser — no image is ever sent anywhere — but the detection model (a few MB) is downloaded from an external CDN the first time you enable it.",
+    "cam.enable": "Enable camera",
+    "cam.disable": "Disable camera",
+    "cam.requesting": "Requesting camera access…",
+    "cam.loadingModel": "Loading face-detection model…",
+    "cam.tracking": "✓ Tracking active — stay in this position.",
+    "cam.denied": "Camera access denied. You can continue without this tracking.",
+    "cam.error": "Camera tracking could not start (model unavailable or unsupported browser). You can continue without it.",
+    "cam.noFace": "📷 Face not detected",
+    "cam.headAngled": "🧭 Horiz. angle",
+    "cam.tooFar": "📷 Too far",
+    "cam.tooClose": "📷 Too close",
+    "cam.eyesUnknown": "👁️ Follow the eye instruction",
+    "cam.rejectedTrial": "⚠️ You moved too close or too far — get back into position and try again.",
+    camLiveDistance: (m) => `📷 ≈ ${m} m`,
+    camLiveAngle: (deg) => `🧭 horiz. ${deg}°`,
+    camEyeInstruction: (openSide, closedSide) => `👁️ ${openSide === "left" ? "L" : "R"} open / ${closedSide === "left" ? "L" : "R"} closed`,
+    camBothEyesInstruction: "👁️ Both open",
   },
 };
 
@@ -260,9 +388,22 @@ function applyI18n() {
   }
   if (document.getElementById("step-test").classList.contains("active") && state.currentEye) {
     renderTestHeader();
+    renderPrecisionNote(document.getElementById("test-precision-note"), state.precisionLimitedAt, d => `6/${fmt(d)}`);
   }
+  if (document.getElementById("step-eye").classList.contains("active")) {
+    renderEyeStep();
+  }
+  if (document.getElementById("step-switch").classList.contains("active") && state.pendingEye) {
+    goToSwitchStep(state.pendingEye);
+  }
+  if (document.getElementById("step-chart").classList.contains("active") && state.currentEye) {
+    showChartStep(state.currentEye);
+  }
+  renderManualDistanceWarning();
   renderDistanceNote();
   renderBsResult();
+  document.getElementById("btn-cam-enable").textContent = cam.enabled ? t("cam.disable") : t("cam.enable");
+  renderCamStatus();
 }
 
 document.querySelectorAll("#lang-toggle .btn").forEach(btn =>
@@ -278,23 +419,39 @@ document.querySelectorAll("#lang-toggle .btn").forEach(btn =>
  * ============================================================ */
 const state = {
   pxPerMm: null,        // issu de la calibration / from calibration
+  calibrationDpr: null, // zoom/densité au moment de la calibration
   distanceMm: 1500,     // distance nominale choisie / chosen nominal distance
   measuredMm: null,     // distance mesurée par la tache aveugle / blind-spot measurement
-  measuredByEye: { right: null, left: null },
-  testMode: "tumblingE", // "tumblingE" | "letters"
-  currentEye: null,     // "right" | "left"
+  measuredByEye: { right: null, left: null, both: null },
+  manualDistanceMm: null, // distance entrée directement (mode chart) / directly entered distance (chart mode)
+  testMode: "tumblingE", // "chart" | "tumblingE" | "letters"
+  eyeMode: "monocular",  // "monocular" | "binocular" | "complete"
+  currentEye: null,     // "right" | "left" | "both"
+  pendingEye: null,
   results: {},
+  usableLines: LINES,   // lignes présentées pour la passe en cours
+  precisionLimitedAt: null, // première ligne où le rendu écran peut devenir limite
   lineIndex: 0,
   trial: 0,
   correctCount: 0,
   currentDir: null,
   currentLetter: null,
   lastPassedIndex: -1,
+  failedAt: null,
 };
 
 // distance réellement utilisée pour dimensionner les optotypes
 function testDistanceMm(eye = state.currentEye) {
   return (eye && state.measuredByEye[eye]) ?? state.distanceMm;
+}
+
+function currentZoomSignature() {
+  return (window.devicePixelRatio || 1) * (window.visualViewport?.scale || 1);
+}
+
+function zoomChangedSinceCalibration() {
+  return state.calibrationDpr !== null
+    && Math.abs(currentZoomSignature() - state.calibrationDpr) > 0.01;
 }
 
 const DIRS = ["up", "right", "down", "left"];
@@ -308,6 +465,40 @@ function show(stepId) {
   document.getElementById(stepId).classList.add("active");
   window.scrollTo(0, 0);
 }
+
+function precisionSensitiveStepActive() {
+  return ["step-test", "step-chart"].some(id => document.getElementById(id).classList.contains("active"));
+}
+
+function refreshVisiblePrecisionNote() {
+  if (document.getElementById("step-test").classList.contains("active") && state.currentEye) {
+    renderPrecisionNote(document.getElementById("test-precision-note"), state.precisionLimitedAt, d => `6/${fmt(d)}`);
+  }
+  if (document.getElementById("step-chart").classList.contains("active") && state.currentEye) {
+    renderPrecisionNote(document.getElementById("chart-precision-note"), state.precisionLimitedAt, feetNotation);
+  }
+}
+
+function blockPageZoomEvents() {
+  document.addEventListener("wheel", e => {
+    if (precisionSensitiveStepActive() && (e.ctrlKey || e.metaKey)) e.preventDefault();
+  }, { passive: false });
+  document.addEventListener("keydown", e => {
+    if (!precisionSensitiveStepActive() || !(e.ctrlKey || e.metaKey)) return;
+    if (["+", "-", "=", "_", "0"].includes(e.key)) e.preventDefault();
+  }, true);
+  ["gesturestart", "gesturechange"].forEach(type => {
+    document.addEventListener(type, e => {
+      if (precisionSensitiveStepActive()) e.preventDefault();
+    }, { passive: false });
+  });
+  window.addEventListener("resize", refreshVisiblePrecisionNote);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", refreshVisiblePrecisionNote);
+  }
+}
+
+blockPageZoomEvents();
 
 /* ============================================================
  * Étape 1 — Calibration
@@ -347,10 +538,11 @@ document.getElementById("card-plus").addEventListener("click", () => adjustCardW
 
 document.getElementById("btn-calibrated").addEventListener("click", () => {
   state.pxPerMm = slider.valueAsNumber / CARD_WIDTH_MM;
+  state.calibrationDpr = currentZoomSignature();
   localStorage.setItem("snellen.pxPerMm", state.pxPerMm);
   renderThumbBar();
   renderDistanceNote();
-  show("step-distance");
+  show("step-mode");
 });
 
 /* ============================================================
@@ -405,6 +597,7 @@ const bs = {
   crossX: 0,
   maxX: 0,
   minX: 0,
+  plausibleMaxOffsetPx: null,
   direction: 1,
 };
 
@@ -507,6 +700,12 @@ function positionBlindSpotPreviewCross() {
   bsCross.style.right = bs.measureEye === "left" ? "24px" : "auto";
 }
 
+// Fenêtre plausible autour de la distance attendue selon l'estimation au
+// pouce : on commence à 60 % pour éviter un long trajet inutile, et on reprend
+// l'essai à 140 % si la personne a probablement oublié de cliquer.
+const BS_THUMB_START_FACTOR = 0.6;
+const BS_THUMB_RETRY_FACTOR = 1.4;
+
 function positionBlindSpotStart() {
   const zoneRect = bsZone.getBoundingClientRect();
   if (!zoneRect.width) return false;
@@ -514,7 +713,18 @@ function positionBlindSpotStart() {
   bs.crossX = positionBlindSpotCross() ?? (bsCross.offsetLeft + bsCross.offsetWidth / 2);
   bs.maxX = zoneRect.width - 40;
   bs.minX = 40;
-  bs.dotX = bs.crossX + bs.direction * Math.max(60, 0.04 * zoneRect.width);
+  const nearStart = Math.max(60, 0.04 * zoneRect.width);
+  const available = bs.direction > 0 ? (bs.maxX - bs.crossX) : (bs.crossX - bs.minX);
+  const expectedBlindSpotOffset = state.pxPerMm
+    ? state.distanceMm * Math.tan(BLINDSPOT_ANGLE_DEG * Math.PI / 180) * state.pxPerMm
+    : 0;
+  const thumbStart = expectedBlindSpotOffset * BS_THUMB_START_FACTOR;
+  const thumbRetryOffset = expectedBlindSpotOffset * BS_THUMB_RETRY_FACTOR;
+  bs.plausibleMaxOffsetPx = thumbRetryOffset > 0 && thumbRetryOffset < available
+    ? thumbRetryOffset
+    : null;
+  const startOffset = Math.min(Math.max(nearStart, thumbStart), available * 0.8);
+  bs.dotX = bs.crossX + bs.direction * startOffset;
   bsDot.style.left = bs.dotX + "px";
   return true;
 }
@@ -548,6 +758,8 @@ function bsNextTrial() {
     if (!bs.running) return;
     bs.dotX += bs.direction * SPEED * (now - last) / 1000;
     last = now;
+    const offset = Math.abs(bs.dotX - bs.crossX);
+    if (bs.plausibleMaxOffsetPx !== null && offset >= bs.plausibleMaxOffsetPx) return bsTooFarReached();
     if ((bs.direction > 0 && bs.dotX >= bs.maxX) || (bs.direction < 0 && bs.dotX <= bs.minX)) return bsEdgeReached();
     bsDot.style.left = bs.dotX + "px";
     bs.animId = requestAnimationFrame(step);
@@ -579,12 +791,28 @@ function bsEdgeReached() {
   bsAdvance();
 }
 
+function bsTooFarReached() {
+  bsStopAnim();
+  document.getElementById("bs-result").innerHTML =
+    `<span class="bs-warn">${t("bsTooFar")}</span>`;
+  renderBlindSpotProgress();
+  bsAdvance();
+}
+
 function bsAdvance() {
   if (bs.samples.length < BS_TRIALS) {
     setTimeout(bsNextTrial, 600);
   } else {
     setTimeout(bsFinish, 650);
   }
+}
+
+// Retire l'essai le plus court et le plus long, puis moyenne les autres —
+// plus robuste qu'une simple médiane contre un clignement ou un clic tardif.
+function trimmedMeanPx(samples) {
+  const sorted = [...samples].sort((a, b) => a - b);
+  const trimmed = sorted.length >= 5 ? sorted.slice(1, -1) : sorted;
+  return trimmed.reduce((sum, v) => sum + v, 0) / trimmed.length;
 }
 
 function bsFinish() {
@@ -595,9 +823,8 @@ function bsFinish() {
   if (bs.samples.length === 0) {
     bs.distances[bs.measureEye] = null;
   } else {
-    const sorted = [...bs.samples].sort((a, b) => a - b);
-    const medianPx = sorted[Math.floor(sorted.length / 2)];
-    bs.distances[bs.measureEye] = (medianPx / state.pxPerMm) / Math.tan(BLINDSPOT_ANGLE_DEG * Math.PI / 180);
+    const trimmedPx = trimmedMeanPx(bs.samples);
+    bs.distances[bs.measureEye] = (trimmedPx / state.pxPerMm) / Math.tan(BLINDSPOT_ANGLE_DEG * Math.PI / 180);
   }
 
   if (bs.measureEye === "right") {
@@ -617,6 +844,7 @@ function bsFinish() {
       : null;
     state.measuredByEye[state.currentEye] = state.measuredMm;
     document.getElementById("btn-start-eye-test").disabled = state.measuredMm === null;
+    if (state.measuredMm !== null) calibrateCameraAnchor(state.measuredMm);
   }
 
   renderBsResult();
@@ -628,19 +856,20 @@ function renderBsResult() {
   const right = bs.distances.right;
   const left = bs.distances.left;
   if (bs.attempted.right && bs.attempted.left && state.measuredMm !== null) {
-    el.innerHTML = t("bsBothResult")(
+    let html = t("bsBothResult")(
       right === null ? "—" : fmtM(right) + " m",
       left === null ? "—" : fmtM(left) + " m",
       fmtM(state.measuredMm)
     );
+    const pct = Math.round(Math.abs(state.measuredMm - state.distanceMm) / state.distanceMm * 100);
+    html += pct >= BS_MISMATCH_PCT
+      ? `<br><span class="bs-warn">${t("bsMismatchWarning")(fmt(pct))}</span>`
+      : t("bsCompare")(fmt(pct), fmtM(state.distanceMm));
+    el.innerHTML = html;
   } else if (bs.attempted.right && right !== null && !bs.attempted.left) {
     el.innerHTML = t("bsOneDone")("right", fmtM(right));
   } else if (bs.attempted.right && right === null && !bs.attempted.left) {
     el.innerHTML = `<span class="bs-warn">${t("bsOneInvalid")("right")}</span>`;
-  } else if (state.measuredMm !== null) {
-    const pct = Math.round(Math.abs(state.measuredMm - state.distanceMm) / state.distanceMm * 100);
-    el.innerHTML = t("bsResult")(fmtM(state.measuredMm)) +
-      t("bsCompare")(fmt(pct), fmtM(state.distanceMm));
   } else if (bs.attempted.right && bs.attempted.left) {
     el.innerHTML = `<span class="bs-warn">${t("bsNone")}</span>`;
   }
@@ -680,18 +909,117 @@ document.getElementById("btn-distanced").addEventListener("click", () => {
   bsZone.hidden = true;
   bsZone.classList.remove("preview");
   bsGoneControls.hidden = true;
-  show("step-mode");
+  renderEyeStep();
+  show("step-eye");
 });
 
-document.querySelectorAll(".mode-choice").forEach(btn => {
+/* ============================================================
+ * Étape 3 — Type de test (chart / E / lettres) × yeux (1 ou 2)
+ * ============================================================ */
+document.querySelectorAll("#mode-type-choices .mode-choice").forEach(btn => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".mode-choice").forEach(b => b.classList.remove("selected"));
+    document.querySelectorAll("#mode-type-choices .mode-choice").forEach(b => b.classList.remove("selected"));
     btn.classList.add("selected");
-    state.testMode = btn.dataset.mode;
+    state.testMode = btn.dataset.testmode;
   });
 });
 
-document.getElementById("btn-mode-next").addEventListener("click", () => show("step-eye"));
+document.querySelectorAll("#mode-eyes-choices .mode-choice").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#mode-eyes-choices .mode-choice").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    state.eyeMode = btn.dataset.eyemode;
+  });
+});
+
+document.getElementById("btn-mode-next").addEventListener("click", () => {
+  show(state.testMode === "chart" ? "step-manual-distance" : "step-distance");
+});
+
+/* ============================================================
+ * Étape 3b — Distance mesurée manuellement (mode chart)
+ * ============================================================ */
+const RECOMMENDED_MANUAL_DISTANCE_MM = 1500;
+const manualDistanceInput = document.getElementById("manual-distance-input");
+
+function renderManualDistanceWarning() {
+  const cm = manualDistanceInput.valueAsNumber;
+  const el = document.getElementById("manual-distance-warning");
+  el.textContent = (cm && cm > 0 && cm * 10 < RECOMMENDED_MANUAL_DISTANCE_MM)
+    ? t("manualWarningShort")(cm)
+    : "";
+}
+manualDistanceInput.addEventListener("input", renderManualDistanceWarning);
+
+document.getElementById("btn-manual-distance-next").addEventListener("click", () => {
+  const cm = manualDistanceInput.valueAsNumber;
+  if (!cm || cm <= 0) return;
+  const mm = cm * 10;
+  state.manualDistanceMm = mm;
+  state.measuredByEye.right = mm;
+  state.measuredByEye.left = mm;
+  state.measuredByEye.both = mm;
+  renderEyeStep();
+  show("step-eye");
+});
+
+/* ============================================================
+ * Étape 4 — Préparation (texte dynamique selon le mode choisi)
+ * ============================================================ */
+function renderEyeStep() {
+  const isChart = state.testMode === "chart";
+  const isBinocular = state.eyeMode === "binocular";
+  const isComplete = state.eyeMode === "complete";
+  document.getElementById("eye-title").textContent = t("eye.title");
+  document.getElementById("eye-p1").innerHTML = isComplete ? t("eye.p1Complete") : isBinocular ? t("eye.p1Bi") : t("eye.p1Mono");
+  document.getElementById("eye-p2").innerHTML = isChart ? t("eye.p2Chart") : t("eye.p2Interactive");
+  document.getElementById("btn-first-pass").innerHTML = isBinocular ? t("eye.startBoth") : t("eye.startRight");
+  document.getElementById("camera-card").hidden = isChart;
+}
+
+function firstEyeForMode() {
+  return state.eyeMode === "binocular" ? "both" : "right";
+}
+
+function nextEyeAfter(eye) {
+  if (state.eyeMode === "complete") {
+    if (eye === "right") return "left";
+    if (eye === "left") return "both";
+    return null;
+  }
+  if (state.eyeMode === "monocular" && eye === "right") return "left";
+  return null;
+}
+
+function prepareBothEyesDistance() {
+  if (state.measuredByEye.both !== null) return;
+  const valid = [state.measuredByEye.right, state.measuredByEye.left].filter(v => v !== null);
+  state.measuredByEye.both = valid.length
+    ? valid.reduce((sum, value) => sum + value, 0) / valid.length
+    : state.distanceMm;
+}
+
+function startPassForEye(eyeKey) {
+  if (state.testMode === "chart") {
+    if (eyeKey === "both") prepareBothEyesDistance();
+    showChartStep(eyeKey);
+  } else {
+    showBlindSpotStep(eyeKey);
+  }
+}
+
+function startFirstPass() {
+  startPassForEye(firstEyeForMode());
+}
+document.getElementById("btn-first-pass").addEventListener("click", startFirstPass);
+
+function startSecondPass() {
+  if (!state.pendingEye) return;
+  const eye = state.pendingEye;
+  state.pendingEye = null;
+  startPassForEye(eye);
+}
+document.getElementById("btn-second-pass").addEventListener("click", startSecondPass);
 
 const letterGrid = document.getElementById("letter-grid");
 letterGrid.innerHTML = LETTERS
@@ -699,35 +1027,556 @@ letterGrid.innerHTML = LETTERS
   .join("");
 
 /* ============================================================
+ * Suivi caméra (optionnel) — webcam face-mesh tracking
+ *
+ * Principe : MediaPipe Face Landmarker détecte le visage dans le flux
+ * webcam et donne la position des deux iris. On mesure leur séparation
+ * en pixels (l'écart interpupillaire, IPD). Comme on connaît déjà une
+ * distance de référence fiable (la mesure de tache aveugle qui vient
+ * d'être faite), on calibre la caméra sur CETTE distance plutôt que de
+ * supposer un IPD moyen de 63 mm à l'aveugle : ipdPx0 à distanceMm0
+ * connue donne ensuite, à tout instant, distance = distanceMm0 * ipdPx0 / ipdPx.
+ * Si aucune calibration n'est encore disponible, on retombe sur l'IPD
+ * moyen adulte (63 mm) et un champ de vision webcam typique, pour une
+ * estimation grossière mais toujours utile en aperçu.
+ * Tout le traitement vidéo reste local au navigateur ; seuls le modèle
+ * et le runtime WASM sont chargés depuis un CDN externe.
+ * ============================================================ */
+const CAMERA_IPD_MM = 63;
+const CAMERA_TOLERANCE_PCT = 15; // au-delà, l'essai en cours est rejeté
+const CAMERA_FADE_PCT = CAMERA_TOLERANCE_PCT * 2; // écart à partir duquel le badge atteint son opacité/couleur la plus "froide"
+const CAMERA_MIN_OPACITY = 0.4; // ne descend jamais en dessous : le texte doit rester lisible
+const EYE_OPEN_WARN_THRESHOLD = 0.35; // score de clignement MediaPipe en-dessous duquel l'œil "fermé" semble en fait ouvert
+const EYE_CLOSED_WARN_THRESHOLD = 0.65; // au-dessus de ce score, l'œil qui devrait rester ouvert semble fermé
+// Un visage tourné (lacet) rapproche optiquement les deux iris par un effet de
+// raccourci en cosinus : à 15°, l'IPD projeté rétrécit d'environ cos(15°)≈0.97,
+// soit ~3-4 %. On ignore l'angle vertical, car la caméra peut être plus haute
+// ou plus basse que le centre de l'écran sans que la tête soit mal alignée.
+const HEAD_YAW_WARN_DEG = 15;
+const FACE_LANDMARKER_VERSION = "0.10.14";
+const FACE_LANDMARKER_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${FACE_LANDMARKER_VERSION}/wasm`;
+const FACE_LANDMARKER_MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const RIGHT_IRIS_INDEX = 468;
+const LEFT_IRIS_INDEX = 473;
+const EYE_GEOM_CLOSED_RATIO = 0.11;
+const EYE_GEOM_OPEN_RATIO = 0.22;
+const EYE_GEOM_POINTS = {
+  left: { outer: 362, inner: 263, upperA: 385, lowerA: 380, upperB: 386, lowerB: 374 },
+  right: { outer: 33, inner: 133, upperA: 160, lowerA: 144, upperB: 159, lowerB: 145 },
+};
+
+const cam = {
+  enabled: false,
+  status: "idle", // idle | requesting | loading | tracking | denied | error
+  video: null,
+  landmarker: null,
+  rafId: null,
+  ipdPx: null,
+  anchorIpdPx: null,
+  anchorDistanceMm: null,
+  blinkLeft: null,  // score de clignement de l'œil gauche du sujet (0 = grand ouvert, 1 = fermé)
+  blinkRight: null,
+  geomBlinkLeft: null,
+  geomBlinkRight: null,
+  yawDeg: null,     // rotation gauche/droite de la tête (lacet)
+  flagged: false,
+};
+
+// Les scores de clignement MediaPipe sont nommés selon le côté de l'image dans
+// plusieurs flux webcam, alors que nos consignes parlent du côté anatomique de
+// la personne. Avec l'aperçu miroir, l'accès doit donc être inversé ici.
+const BLINK_SCORE_KEY_FOR_USER_EYE = {
+  left: "right",
+  right: "left",
+};
+
+// Extrait seulement le lacet horizontal (yaw) de la matrice de transformation
+// faciale 4×4 de MediaPipe (colonne-majeure, comme en WebGL/three.js) :
+// l'élément (ligne r, colonne c) est à data[c*4 + r].
+function computeHeadYawDeg(matrix) {
+  return Math.atan2(matrix[8], matrix[10]) * 180 / Math.PI;
+}
+
+function isHeadAngled() {
+  return cam.yawDeg !== null && Math.abs(cam.yawDeg) > HEAD_YAW_WARN_DEG;
+}
+
+function landmarkDistancePx(a, b) {
+  if (!a || !b || !cam.video) return null;
+  const dx = (a.x - b.x) * cam.video.videoWidth;
+  const dy = (a.y - b.y) * cam.video.videoHeight;
+  return Math.hypot(dx, dy);
+}
+
+function clamp01(x) {
+  return Math.max(0, Math.min(1, x));
+}
+
+function geometricBlinkScore(lm, side) {
+  const p = EYE_GEOM_POINTS[side];
+  if (!lm || !p) return null;
+  const width = landmarkDistancePx(lm[p.outer], lm[p.inner]);
+  const gapA = landmarkDistancePx(lm[p.upperA], lm[p.lowerA]);
+  const gapB = landmarkDistancePx(lm[p.upperB], lm[p.lowerB]);
+  if (!width || gapA === null || gapB === null) return null;
+  const openRatio = ((gapA + gapB) / 2) / width;
+  return clamp01((EYE_GEOM_OPEN_RATIO - openRatio) / (EYE_GEOM_OPEN_RATIO - EYE_GEOM_CLOSED_RATIO));
+}
+
+// Formate une distance en mètres avec toujours exactement 2 décimales (jamais
+// "0,8" un coup et "0,77" le suivant) : sans ça, la largeur du texte varie à
+// chaque mise à jour et le badge — donc toute la ligne d'en-tête — semble
+// trembler pendant le suivi en direct.
+function fmtCamM(mm) {
+  const meters = (Math.round(mm / 10) / 100).toFixed(2);
+  return lang === "fr" ? meters.replace(".", ",") : meters;
+}
+
+// Quel œil est censé être ouvert en ce moment, selon l'étape active.
+function expectedOpenEye() {
+  if (document.getElementById("step-test").classList.contains("active")) {
+    // "both" = les deux yeux doivent être ouverts, donc aucun œil "fermé" à vérifier
+    return state.currentEye === "both" ? null : state.currentEye;
+  }
+  if (document.getElementById("step-blindspot").classList.contains("active")) return bs.measureEye;
+  return null;
+}
+
+async function toggleCamera() {
+  if (cam.enabled) {
+    disableCamera();
+    return;
+  }
+  cam.status = "requesting";
+  renderCamStatus();
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 }, audio: false });
+  } catch {
+    cam.status = "denied";
+    renderCamStatus();
+    return;
+  }
+
+  cam.video = document.getElementById("cam-video");
+  cam.video.srcObject = stream;
+  cam.video.hidden = false;
+  try {
+    await cam.video.play();
+    cam.status = "loading";
+    renderCamStatus();
+
+    const vision = await import(/* webpackIgnore: true */ `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${FACE_LANDMARKER_VERSION}`);
+    const filesetResolver = await vision.FilesetResolver.forVisionTasks(FACE_LANDMARKER_WASM);
+    try {
+      cam.landmarker = await vision.FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "GPU" },
+        runningMode: "VIDEO",
+        numFaces: 1,
+        outputFaceBlendshapes: true,
+        outputFacialTransformationMatrixes: true,
+      });
+    } catch {
+      cam.landmarker = await vision.FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "CPU" },
+        runningMode: "VIDEO",
+        numFaces: 1,
+        outputFaceBlendshapes: true,
+        outputFacialTransformationMatrixes: true,
+      });
+    }
+  } catch {
+    stream.getTracks().forEach(tr => tr.stop());
+    cam.video.hidden = true;
+    cam.status = "error";
+    renderCamStatus();
+    return;
+  }
+
+  cam.enabled = true;
+  cam.status = "tracking";
+  renderCamStatus();
+  document.getElementById("btn-cam-enable").textContent = t("cam.disable");
+  trackCameraLoop();
+}
+
+function trackCameraLoop() {
+  if (!cam.enabled) return;
+  if (cam.video.readyState >= 2) {
+    const result = cam.landmarker.detectForVideo(cam.video, performance.now());
+    const lm = result.faceLandmarks && result.faceLandmarks[0];
+    if (lm) {
+      const l = lm[LEFT_IRIS_INDEX], r = lm[RIGHT_IRIS_INDEX];
+      const dx = (l.x - r.x) * cam.video.videoWidth;
+      const dy = (l.y - r.y) * cam.video.videoHeight;
+      cam.ipdPx = Math.hypot(dx, dy);
+      cam.geomBlinkLeft = geometricBlinkScore(lm, "left");
+      cam.geomBlinkRight = geometricBlinkScore(lm, "right");
+    } else {
+      cam.ipdPx = null;
+      cam.geomBlinkLeft = null;
+      cam.geomBlinkRight = null;
+    }
+    const categories = result.faceBlendshapes && result.faceBlendshapes[0] && result.faceBlendshapes[0].categories;
+    cam.blinkLeft = categories ? (categories.find(c => c.categoryName === "eyeBlinkLeft")?.score ?? null) : null;
+    cam.blinkRight = categories ? (categories.find(c => c.categoryName === "eyeBlinkRight")?.score ?? null) : null;
+    const matrix = result.facialTransformationMatrixes && result.facialTransformationMatrixes[0] && result.facialTransformationMatrixes[0].data;
+    if (matrix) {
+      cam.yawDeg = computeHeadYawDeg(matrix);
+    } else {
+      cam.yawDeg = null;
+    }
+    updateCameraFeedback();
+  }
+  cam.rafId = requestAnimationFrame(trackCameraLoop);
+}
+
+// Ancre la caméra sur une distance déjà mesurée (tache aveugle) : appelé
+// juste après chaque mesure réussie, pendant que la personne est encore
+// en place à cette distance connue.
+function calibrateCameraAnchor(distanceMm) {
+  if (!cam.enabled || cam.ipdPx === null || !distanceMm) return;
+  // Un visage tourné au moment précis de l'ancrage fausserait la distance de
+  // référence pour toute la suite de la session — mieux vaut rater cette
+  // calibration et retomber sur l'hypothèse générique (63 mm) que d'ancrer sur
+  // une lecture biaisée par l'angle.
+  if (isHeadAngled()) return;
+  cam.anchorIpdPx = cam.ipdPx;
+  cam.anchorDistanceMm = distanceMm;
+}
+
+function currentCameraDistanceMm() {
+  if (!cam.enabled || cam.ipdPx === null) return null;
+  if (cam.anchorIpdPx && cam.anchorDistanceMm) {
+    return cam.anchorDistanceMm * cam.anchorIpdPx / cam.ipdPx;
+  }
+  // Repli avant toute calibration : IPD adulte moyen + champ de vision webcam ~60°.
+  const assumedFocalPx = (cam.video.videoWidth / 2) / Math.tan(30 * Math.PI / 180);
+  return (CAMERA_IPD_MM * assumedFocalPx) / cam.ipdPx;
+}
+
+function oppositeEye(eye) {
+  return eye === "right" ? "left" : "right";
+}
+
+function blinkScoreForEye(eye) {
+  const key = BLINK_SCORE_KEY_FOR_USER_EYE[eye];
+  const blendScore = key === "left" ? cam.blinkLeft : key === "right" ? cam.blinkRight : null;
+  const geomScore = key === "left" ? cam.geomBlinkLeft : key === "right" ? cam.geomBlinkRight : null;
+  if (blendScore === null) return geomScore;
+  if (geomScore === null) return blendScore;
+  return Math.max(blendScore, geomScore);
+}
+
+function resetEyeTrackingScores() {
+  cam.blinkLeft = null;
+  cam.blinkRight = null;
+  cam.geomBlinkLeft = null;
+  cam.geomBlinkRight = null;
+}
+
+// Yeux qui devraient être ouverts/fermés en ce moment, et leurs scores de
+// clignement — utilisé à la fois par le badge de l'étape de test et par
+// l'indice de la tache aveugle.
+function expectedEyeState() {
+  const openEye = expectedOpenEye();
+  if (!openEye) return { openSide: null, openScore: null, closedSide: null, closedScore: null };
+  const closedSide = oppositeEye(openEye);
+  return {
+    openSide: openEye,
+    openScore: blinkScoreForEye(openEye),
+    closedSide,
+    closedScore: blinkScoreForEye(closedSide),
+  };
+}
+
+function setBadgeNeutral(badge, textEl, text) {
+  badge.classList.remove("eye-warn");
+  badge.style.removeProperty("--cam-hue");
+  badge.style.opacity = 1;
+  textEl.textContent = text;
+}
+
+function setBadgeEyeWarning(badge, textEl, text) {
+  badge.classList.add("eye-warn");
+  badge.style.removeProperty("--cam-hue");
+  badge.style.opacity = 1;
+  textEl.textContent = text;
+}
+
+// Retour "chaud/froid" continu, réutilisé pour la distance ET l'angle : à la
+// valeur cible, badge vert et 100% opaque ; plus l'écart grandit (par rapport
+// à sa propre tolérance), plus la couleur glisse vers l'orange puis le rouge
+// et plus le badge devient transparent (jamais sous CAMERA_MIN_OPACITY, pour
+// rester lisible).
+function setBadgeHotCold(badge, textEl, k, text) {
+  badge.classList.remove("eye-warn");
+  const hue = k <= 0.5 ? 142 - (142 - 40) * (k / 0.5) : 40 - 40 * ((k - 0.5) / 0.5);
+  badge.style.setProperty("--cam-hue", hue.toFixed(0));
+  badge.style.opacity = (1 - k * (1 - CAMERA_MIN_OPACITY)).toFixed(2);
+  textEl.textContent = text;
+}
+
+function updateCameraFeedback() {
+  const { openSide, closedSide } = expectedEyeState();
+  const angleWarning = cam.ipdPx !== null && isHeadAngled();
+
+  const testActive = document.getElementById("step-test").classList.contains("active");
+  const badges = document.getElementById("cam-badges");
+  const distBadge = document.getElementById("cam-badge");
+  const distText = document.getElementById("cam-badge-text");
+  const angleBadge = document.getElementById("cam-badge-angle");
+  const angleText = document.getElementById("cam-badge-angle-text");
+  const eyeBadge = document.getElementById("cam-badge-eye");
+  const eyeText = document.getElementById("cam-badge-eye-text");
+  let distanceOutOfTolerance = false;
+
+  if (testActive) {
+    badges.hidden = false;
+    distBadge.hidden = false;
+    angleBadge.hidden = false;
+    eyeBadge.hidden = false;
+
+    // Badge distance : il reste toujours dédié à la distance. Les problèmes
+    // d'angle et d'œil ont leurs propres espaces séparés juste à côté.
+    if (cam.ipdPx === null) {
+      setBadgeNeutral(distBadge, distText, t("cam.noFace"));
+    } else {
+      const d = currentCameraDistanceMm();
+      if (d === null) {
+        setBadgeNeutral(distBadge, distText, t("cam.noFace"));
+      } else {
+        const refMm = cam.anchorDistanceMm ?? state.distanceMm;
+        const pct = Math.abs(d - refMm) / refMm * 100;
+        distanceOutOfTolerance = pct > CAMERA_TOLERANCE_PCT;
+        if (distanceOutOfTolerance) {
+          setBadgeEyeWarning(distBadge, distText, d > refMm ? t("cam.tooFar") : t("cam.tooClose"));
+        } else {
+          const k = Math.min(1, pct / CAMERA_FADE_PCT);
+          setBadgeHotCold(distBadge, distText, k, t("camLiveDistance")(fmtCamM(d)));
+        }
+      }
+    }
+
+    // Badge angle, indépendant : sa propre lecture chaud/froid, remplacée par
+    // un avertissement texte seulement au-delà du seuil de tolérance.
+    if (cam.ipdPx === null || cam.yawDeg === null) {
+      setBadgeNeutral(angleBadge, angleText, t("camLiveAngle")("—"));
+    } else if (angleWarning) {
+      setBadgeEyeWarning(angleBadge, angleText, t("cam.headAngled"));
+    } else {
+      const yawRatio = Math.abs(cam.yawDeg) / HEAD_YAW_WARN_DEG;
+      const k = Math.min(1, yawRatio / 2);
+      setBadgeHotCold(angleBadge, angleText, k, t("camLiveAngle")(Math.round(cam.yawDeg)));
+    }
+
+    // Badge œil : consigne stable seulement. La détection webcam d'un seul œil
+    // fermé est trop variable pour être présentée comme une validation.
+    if (!openSide && !closedSide) {
+      setBadgeNeutral(eyeBadge, eyeText, t("camBothEyesInstruction"));
+    } else if (!openSide || !closedSide) {
+      setBadgeNeutral(eyeBadge, eyeText, t("cam.eyesUnknown"));
+    } else {
+      setBadgeNeutral(eyeBadge, eyeText, t("camEyeInstruction")(openSide, closedSide));
+    }
+  } else {
+    badges.hidden = true;
+    distBadge.hidden = true;
+    angleBadge.hidden = true;
+    eyeBadge.hidden = true;
+  }
+
+  // La détection d'œil fermé reste affichée comme aide, mais elle n'est pas
+  // assez fiable d'un côté à l'autre pour rejeter les réponses du test.
+  cam.flagged = angleWarning || distanceOutOfTolerance;
+
+  // Indice léger et non bloquant pendant la mesure de la tache aveugle : les
+  // mêmes vérifications y sont encore plus importantes, puisqu'un œil mal
+  // fermé ou une tête tournée y faussent directement la mesure de distance.
+  const bsHint = document.getElementById("cam-eye-hint-bs");
+  if (bsHint) {
+    const bsActive = document.getElementById("step-blindspot").classList.contains("active");
+    bsHint.textContent = !bsActive ? ""
+      : angleWarning ? t("cam.headAngled")
+      : openSide && closedSide ? t("camEyeInstruction")(openSide, closedSide)
+      : "";
+  }
+}
+
+function showCamRejection() {
+  const banner = document.getElementById("cam-reject-banner");
+  banner.hidden = false;
+  banner.textContent = t("cam.rejectedTrial");
+  clearTimeout(showCamRejection._timer);
+  showCamRejection._timer = setTimeout(() => { banner.hidden = true; }, 1800);
+}
+
+function disableCamera() {
+  cam.enabled = false;
+  cam.status = "idle";
+  cam.ipdPx = null;
+  cam.anchorIpdPx = null;
+  cam.anchorDistanceMm = null;
+  resetEyeTrackingScores();
+  cam.flagged = false;
+  if (cam.rafId) cancelAnimationFrame(cam.rafId);
+  if (cam.video) {
+    if (cam.video.srcObject) cam.video.srcObject.getTracks().forEach(tr => tr.stop());
+    cam.video.srcObject = null;
+    cam.video.hidden = true;
+  }
+  const badge = document.getElementById("cam-badge");
+  if (badge) badge.hidden = true;
+  const angleBadge = document.getElementById("cam-badge-angle");
+  if (angleBadge) angleBadge.hidden = true;
+  const eyeBadge = document.getElementById("cam-badge-eye");
+  if (eyeBadge) eyeBadge.hidden = true;
+  const badges = document.getElementById("cam-badges");
+  if (badges) badges.hidden = true;
+  const bsHint = document.getElementById("cam-eye-hint-bs");
+  if (bsHint) bsHint.textContent = "";
+  const btn = document.getElementById("btn-cam-enable");
+  if (btn) btn.textContent = t("cam.enable");
+  renderCamStatus();
+}
+
+function renderCamStatus() {
+  const el = document.getElementById("cam-status");
+  if (!el) return;
+  const map = {
+    idle: "",
+    requesting: t("cam.requesting"),
+    loading: t("cam.loadingModel"),
+    tracking: t("cam.tracking"),
+    denied: t("cam.denied"),
+    error: t("cam.error"),
+  };
+  el.textContent = map[cam.status] || "";
+}
+
+document.getElementById("btn-cam-enable").addEventListener("click", toggleCamera);
+
+/* ============================================================
  * Étapes 3–4 — Test
  * ============================================================ */
-function optotypeHeightPx(denominator) {
+function optotypeHeightPx(denominator, distanceMm = testDistanceMm()) {
   // À 6/6, l'optotype sous-tend 5 minutes d'arc à la distance de test.
-  const heightMm = 2 * testDistanceMm() * Math.tan(ARCMIN_5 / 2) * (denominator / 6);
+  // Pour 6/d, l'angle est multiplié par d/6. On applique le facteur AVANT le
+  // tan() pour garder la formule géométrique exacte, même sur les grandes lignes.
+  const visualAngleRad = ARCMIN_5 * (denominator / 6);
+  const heightMm = 2 * distanceMm * Math.tan(visualAngleRad / 2);
   return heightMm * state.pxPerMm;
+}
+
+const letterHeightRatioCache = new Map();
+
+function letterGlyphHeightRatio(letter) {
+  if (letterHeightRatioCache.has(letter)) return letterHeightRatioCache.get(letter);
+  const canvas = letterGlyphHeightRatio.canvas || (letterGlyphHeightRatio.canvas = document.createElement("canvas"));
+  const ctx = canvas.getContext("2d");
+  ctx.font = `${LETTER_METRIC_FONT_SIZE}px ${LETTER_OPTOTYPE_FONT}`;
+  const metrics = ctx.measureText(letter);
+  const measuredHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+  const ratio = measuredHeight > 0 ? measuredHeight / LETTER_METRIC_FONT_SIZE : 1;
+  letterHeightRatioCache.set(letter, ratio);
+  return ratio;
+}
+
+function letterFontSizeForHeight(letter, targetHeightPx) {
+  return targetHeightPx / letterGlyphHeightRatio(letter);
+}
+
+function applyLetterOptotypeSize(el, letter, targetHeightPx) {
+  el.style.fontSize = letterFontSizeForHeight(letter, targetHeightPx) + "px";
+  el.style.width = targetHeightPx * 1.35 + "px";
+  el.style.height = targetHeightPx * 1.35 + "px";
+}
+
+// Largeur de trait minimale, en pixels PHYSIQUES de l'écran (pas en pixels CSS),
+// pour qu'un trait de l'optotype existe comme élément distinct plutôt que de
+// disparaître dans l'anti-crénelage. Le E (grille 5×5) et les lettres ont tous
+// deux un trait d'environ 1/5 de la hauteur totale de l'optotype.
+// NB : un écran haute densité (Retina, devicePixelRatio > 1) donne PLUS de
+// pixels physiques pour la même taille en pixels CSS, donc rend la coupure
+// moins agressive, pas plus — si le test s'arrête trop tôt, ce n'est pas la
+// densité d'écran qui manque, c'est ce seuil qui était trop prudent : 1 px
+// physique est déjà suffisant pour qu'un trait antialiasé reste net et
+// discernable sur un écran moderne, et le E/lettres testés restent de toute
+// façon validés par le taux de réussite (3/5) en mode interactif.
+const MIN_STROKE_DEVICE_PX = 1;
+
+function reliableAtDenom(denom, distanceMm) {
+  const strokeCssPx = optotypeHeightPx(denom, distanceMm) / 5;
+  const strokeDevicePx = strokeCssPx * (window.devicePixelRatio || 1);
+  return strokeDevicePx >= MIN_STROKE_DEVICE_PX;
+}
+
+// Lignes présentées à l'utilisateur. On ne masque plus les petites lignes :
+// le seuil de pixels sert seulement à avertir que l'affichage peut expliquer
+// un échec aux lignes les plus fines.
+function usableLinesFor(distanceMm, lines = LINES) {
+  return [...lines];
+}
+
+function firstUnreliableDenomFor(distanceMm, lines = LINES) {
+  return lines.find(d => !reliableAtDenom(d, distanceMm)) ?? null;
+}
+
+function nextHarderLineAfter(denom, lines) {
+  const idx = lines.indexOf(denom);
+  return idx >= 0 ? (lines[idx + 1] ?? null) : null;
 }
 
 function startEyeTest(eye) {
   state.currentEye = eye;
+  state.usableLines = usableLinesFor(testDistanceMm(eye));
+  state.precisionLimitedAt = firstUnreliableDenomFor(testDistanceMm(eye));
   state.lineIndex = 0;
   state.lastPassedIndex = -1;
+  state.failedAt = null;
   renderTestMode();
   renderTestEyeIcons();
+  renderPrecisionNote(document.getElementById("test-precision-note"), state.precisionLimitedAt, d => `6/${fmt(d)}`);
   startLine();
   show("step-test");
   renderTestHeader();
 }
 
+// Avertit si la résolution de l'écran (à la distance de test) empêche
+// d'afficher de façon fiable les lignes les plus petites — sinon on risque de
+// présenter un optotype qui ressemble à un flou plutôt qu'à une forme nette,
+// et de faire "échouer" quelqu'un à cause de l'écran plutôt que de sa vue.
+function renderPrecisionNote(el, firstUnreliable, formatFraction) {
+  if (!el) return;
+  if (zoomChangedSinceCalibration()) {
+    el.textContent = t("zoomChangedWarning");
+    return;
+  }
+  el.textContent = firstUnreliable
+    ? t("precisionCapNote")(formatFraction(firstUnreliable))
+    : "";
+}
+
 function renderTestHeader() {
   document.getElementById("test-eye-label").textContent =
-    state.currentEye === "right" ? t("eyeRightLabel") : t("eyeLeftLabel");
+    state.currentEye === "both" ? t("bothEyesOpenLabel")
+      : state.currentEye === "right" ? t("eyeRightLabel") : t("eyeLeftLabel");
   document.getElementById("test-line-label").textContent =
-    t("lineLabel")(LINES[state.lineIndex], state.trial + 1, TRIALS_PER_LINE);
+    t("lineLabel")(state.usableLines[state.lineIndex], state.trial + 1, TRIALS_PER_LINE);
   renderTestEyeIcons();
 }
 
 function renderTestEyeIcons() {
   if (!state.currentEye) return;
+  if (state.currentEye === "both") {
+    testEyeLeftSide.hidden = false;
+    testEyeRightSide.hidden = false;
+    setBlindSpotEyeIcon(testEyeLeftSide, true);
+    setBlindSpotEyeIcon(testEyeRightSide, true);
+    return;
+  }
+  testEyeLeftSide.hidden = false;
+  testEyeRightSide.hidden = false;
   const leftOpen = state.currentEye === "left";
   setBlindSpotEyeIcon(testEyeLeftSide, leftOpen);
   setBlindSpotEyeIcon(testEyeRightSide, !leftOpen);
@@ -754,7 +1603,7 @@ function startLine() {
 }
 
 function nextTrial() {
-  const denom = LINES[state.lineIndex];
+  const denom = state.usableLines[state.lineIndex];
   const px = optotypeHeightPx(denom);
 
   if (state.testMode === "letters") {
@@ -763,9 +1612,7 @@ function nextTrial() {
     state.currentLetter = letter;
     const letterEl = document.getElementById("letter-optotype");
     letterEl.textContent = letter;
-    letterEl.style.fontSize = px + "px";
-    letterEl.style.width = px * 1.15 + "px";
-    letterEl.style.height = px * 1.15 + "px";
+    applyLetterOptotypeSize(letterEl, letter, px);
   } else {
     let dir;
     do { dir = DIRS[Math.floor(Math.random() * DIRS.length)]; } while (dir === state.currentDir);
@@ -781,6 +1628,10 @@ function nextTrial() {
 }
 
 function answer(value) {
+  if (cam.enabled && cam.flagged) {
+    showCamRejection();
+    return; // essai non compté ; on redemande le même optotype une fois repositionné
+  }
   const expected = state.testMode === "letters" ? state.currentLetter : state.currentDir;
   if (value === expected) state.correctCount++;
   state.trial++;
@@ -796,30 +1647,56 @@ function answer(value) {
 
 function passLine() {
   state.lastPassedIndex = state.lineIndex;
-  if (state.lineIndex + 1 >= LINES.length) return endEyeTest();
+  if (state.lineIndex + 1 >= state.usableLines.length) {
+    state.failedAt = null;
+    return endEyeTest();
+  }
   state.lineIndex++;
   startLine();
 }
 
 function failLine() {
+  state.failedAt = state.usableLines[state.lineIndex] ?? null;
   endEyeTest();
 }
 
 function endEyeTest() {
   state.results[state.currentEye] = {
-    denominator: state.lastPassedIndex >= 0 ? LINES[state.lastPassedIndex] : null,
+    denominator: state.lastPassedIndex >= 0 ? state.usableLines[state.lastPassedIndex] : null,
+    precisionLimitedAt: state.precisionLimitedAt,
+    failedAt: state.failedAt,
   };
-  if (state.currentEye === "right") {
-    const r = state.results.right;
-    document.getElementById("switch-result").textContent = t("rightEyeResult")(
-      r.denominator !== null
-        ? t("approx")(r.denominator, feetNotation(r.denominator))
-        : t("worse")
-    );
-    show("step-switch");
+  const nextEye = nextEyeAfter(state.currentEye);
+  if (nextEye) {
+    goToSwitchStep(nextEye);
   } else {
     showResults();
   }
+}
+
+// Interlude entre les passes : droit -> gauche, puis optionnellement gauche -> deux yeux.
+// En binoculaire simple, il n'y a qu'une seule passe "both".
+function goToSwitchStep(nextEye) {
+  state.pendingEye = nextEye;
+  const completedEye = state.currentEye;
+  const completedResult = state.results[completedEye];
+  const resultLabel = completedEye === "right"
+    ? t("rightEye")
+    : completedEye === "left"
+      ? t("leftEye")
+      : t("bothEyes");
+  document.getElementById("switch-result").textContent = `${resultLabel} : ${
+    completedResult.denominator !== null
+      ? t("approx")(completedResult.denominator, feetNotation(completedResult.denominator))
+      : t("worse")
+  }.`;
+  document.getElementById("switch-text").innerHTML = nextEye === "both"
+    ? t("switch.textBoth")
+    : state.testMode === "chart" ? t("switch.textChart") : t("switch.textBlindspot");
+  document.getElementById("btn-second-pass").textContent = nextEye === "both"
+    ? t("switch.btnBoth")
+    : t("switch.btn");
+  show("step-switch");
 }
 
 document.querySelectorAll(".btn.arrow").forEach(btn =>
@@ -904,15 +1781,42 @@ function resultRow(label, res) {
   return `<tr><td>${label}</td><td>6/${fmt(d)}</td><td>${feetNotation(d)}</td><td>${decimal}</td><td>${logmar}</td></tr>`;
 }
 
-function showResults() {
-  document.getElementById("results-distance").textContent =
-    t("resultsDistance")(fmtM(testDistanceMm("right")), fmtM(testDistanceMm("left")));
-  const tbody = document.querySelector("#results-table tbody");
-  tbody.innerHTML =
-    resultRow(t("rightEye"), state.results.right) +
-    resultRow(t("leftEye"), state.results.left);
+function resultTouchesPrecisionLimit(res) {
+  if (!res || !res.precisionLimitedAt) return false;
+  if (res.failedAt !== null && res.failedAt !== undefined) {
+    return res.failedAt <= res.precisionLimitedAt;
+  }
+  return res.denominator !== null && res.denominator <= res.precisionLimitedAt;
+}
 
-  const denoms = [state.results.right.denominator, state.results.left.denominator];
+function showResults() {
+  disableCamera();
+  const resultEyes = state.eyeMode === "binocular"
+    ? ["both"]
+    : state.eyeMode === "complete"
+      ? ["right", "left", "both"]
+      : ["right", "left"];
+  document.getElementById("results-distance").textContent = state.eyeMode === "binocular"
+    ? t("resultsDistanceBoth")(fmtM(testDistanceMm("both")))
+    : state.eyeMode === "complete"
+      ? t("resultsDistanceComplete")(fmtM(testDistanceMm("right")), fmtM(testDistanceMm("left")), fmtM(testDistanceMm("both")))
+      : t("resultsDistance")(fmtM(testDistanceMm("right")), fmtM(testDistanceMm("left")));
+
+  const tbody = document.querySelector("#results-table tbody");
+  tbody.innerHTML = resultEyes
+    .map(eye => resultRow(resultLabelForEye(eye), state.results[eye]))
+    .join("");
+
+  const precisionEyes = resultEyes
+    .filter(eye => resultTouchesPrecisionLimit(state.results[eye]))
+    .map(eye => resultLabelForEye(eye).toLowerCase());
+  const precisionWarning = document.getElementById("results-precision-warning");
+  precisionWarning.hidden = precisionEyes.length === 0;
+  precisionWarning.innerHTML = precisionEyes.length
+    ? `<strong>${t("results.precisionTitle")}.</strong> ${t("resultsPrecisionWarning")(precisionEyes.join(", "))}`
+    : "";
+
+  const denoms = resultEyes.map(eye => state.results[eye]?.denominator ?? null);
   const comment = document.getElementById("results-comment");
   if (denoms.every(d => d !== null && d <= 6)) {
     comment.textContent = t("commentGood");
@@ -924,6 +1828,111 @@ function showResults() {
   show("step-results");
 }
 
+function resultLabelForEye(eye) {
+  if (eye === "right") return t("rightEye");
+  if (eye === "left") return t("leftEye");
+  return t("bothEyes");
+}
+
+/* ============================================================
+ * Mode Chart — tableau Snellen complet, lecture auto-déclarée
+ * ============================================================ */
+const CHART_LETTERS_PER_LINE = 5;
+
+function showChartStep(eye) {
+  state.currentEye = eye;
+  state.usableLines = usableLinesFor(testDistanceMm(eye), CHART_LINES);
+  state.precisionLimitedAt = firstUnreliableDenomFor(testDistanceMm(eye), CHART_LINES);
+  document.getElementById("chart-eye-label").textContent =
+    eye === "both" ? t("chartEyeBoth") : t("chartEyeMono")(eye);
+  document.getElementById("chart-instructions").textContent = t("chart.instructions");
+  renderPrecisionNote(document.getElementById("chart-precision-note"), state.precisionLimitedAt, feetNotation);
+  buildChartRows();
+  buildChartLineButtons();
+  show("step-chart");
+}
+
+function buildChartRows() {
+  const container = document.getElementById("chart-rows");
+  container.innerHTML = "";
+  state.usableLines.forEach((denom, i) => {
+    const px = optotypeHeightPx(denom);
+    const row = document.createElement("div");
+    row.className = "chart-row";
+
+    const letters = document.createElement("span");
+    letters.className = "chart-row-letters";
+    letters.style.gap = (px * 0.35) + "px";
+    const pool = [...LETTERS];
+    for (let j = 0; j < CHART_LETTERS_PER_LINE; j++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      const letter = pool.splice(idx, 1)[0];
+      const span = document.createElement("span");
+      span.textContent = letter;
+      span.style.fontSize = letterFontSizeForHeight(letter, px) + "px";
+      letters.appendChild(span);
+    }
+
+    // Étiquette flottante à droite (numéro de ligne + fraction), en dehors du
+    // flux normal : n'affecte pas le centrage des lettres sur la ligne, comme
+    // sur un vrai tableau Snellen.
+    const label = document.createElement("span");
+    label.className = "chart-row-label";
+    label.innerHTML =
+      `<span class="chart-row-index">${i + 1}</span><span class="chart-row-frac">${feetNotation(denom)}</span>`;
+
+    row.appendChild(letters);
+    row.appendChild(label);
+    container.appendChild(row);
+  });
+}
+
+function refreshLetterMetricSizing() {
+  letterHeightRatioCache.clear();
+  if (document.getElementById("step-test").classList.contains("active")
+    && state.testMode === "letters"
+    && state.currentLetter
+    && state.usableLines[state.lineIndex] !== undefined) {
+    const px = optotypeHeightPx(state.usableLines[state.lineIndex]);
+    applyLetterOptotypeSize(document.getElementById("letter-optotype"), state.currentLetter, px);
+  }
+  if (document.getElementById("step-chart").classList.contains("active") && state.currentEye) {
+    buildChartRows();
+  }
+}
+
+if (document.fonts) {
+  document.fonts.load(`${LETTER_METRIC_FONT_SIZE}px ${LETTER_OPTOTYPE_FONT}`)
+    .then(refreshLetterMetricSizing)
+    .catch(() => {});
+  document.fonts.ready.then(refreshLetterMetricSizing);
+}
+
+function buildChartLineButtons() {
+  const container = document.getElementById("chart-line-buttons");
+  container.innerHTML = state.usableLines
+    .map(denom => `<button class="btn chart-line" data-denom="${denom}">${feetNotation(denom)}</button>`)
+    .join("");
+  container.querySelectorAll(".chart-line").forEach(btn =>
+    btn.addEventListener("click", () => chartAnswer(parseFloat(btn.dataset.denom)))
+  );
+}
+
+function chartAnswer(denominator) {
+  state.results[state.currentEye] = {
+    denominator,
+    precisionLimitedAt: state.precisionLimitedAt,
+    failedAt: denominator === null ? state.usableLines[0] : nextHarderLineAfter(denominator, state.usableLines),
+  };
+  const nextEye = nextEyeAfter(state.currentEye);
+  if (nextEye) {
+    goToSwitchStep(nextEye);
+  } else {
+    showResults();
+  }
+}
+document.getElementById("btn-chart-none").addEventListener("click", () => chartAnswer(null));
+
 /* ============================================================
  * Navigation générale / General navigation
  * ============================================================ */
@@ -931,12 +1940,20 @@ document.getElementById("btn-start").addEventListener("click", () => {
   initCalibration();
   show("step-calibrate");
 });
-document.getElementById("btn-eye-right").addEventListener("click", () => showBlindSpotStep("right"));
-document.getElementById("btn-eye-left").addEventListener("click", () => showBlindSpotStep("left"));
 document.getElementById("btn-restart").addEventListener("click", () => {
   state.results = {};
   state.measuredMm = null;
-  state.measuredByEye = { right: null, left: null };
+  state.measuredByEye = { right: null, left: null, both: null };
+  state.manualDistanceMm = null;
+  state.testMode = "tumblingE";
+  state.eyeMode = "monocular";
+  state.pendingEye = null;
+  state.precisionLimitedAt = null;
+  state.failedAt = null;
+  document.querySelectorAll("#mode-type-choices .mode-choice").forEach(b =>
+    b.classList.toggle("selected", b.dataset.testmode === state.testMode));
+  document.querySelectorAll("#mode-eyes-choices .mode-choice").forEach(b =>
+    b.classList.toggle("selected", b.dataset.eyemode === state.eyeMode));
   show("step-intro");
 });
 

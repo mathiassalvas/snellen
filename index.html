@@ -2,9 +2,9 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test de Snellen à la maison — Home Snellen Test</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Test Snellen - Mathias</title>
+  <link rel="stylesheet" href="style.css?v=20260714-zoom-badges">
 </head>
 <body>
 
@@ -15,6 +15,7 @@
 
   <!-- ÉTAPE 0 : Accueil / Home -->
   <section id="step-intro" class="step active">
+    <div class="intro-bg" aria-hidden="true"></div>
     <div class="card">
       <h1 data-i18n="intro.title"></h1>
       <p class="lead" data-i18n="intro.lead"></p>
@@ -93,28 +94,79 @@
     <div class="card">
       <h2 data-i18n="mode.title"></h2>
       <p data-i18n="mode.text"></p>
-      <div class="mode-choices">
-        <button class="btn mode-choice selected" data-mode="tumblingE">
+
+      <h3 data-i18n="mode.typeLabel"></h3>
+      <div class="mode-choices" id="mode-type-choices">
+        <button class="btn mode-choice" data-testmode="chart">
+          <strong data-i18n="mode.chartTitle"></strong>
+          <span data-i18n="mode.chartText"></span>
+        </button>
+        <button class="btn mode-choice selected" data-testmode="tumblingE">
           <strong data-i18n="mode.eTitle"></strong>
           <span data-i18n="mode.eText"></span>
         </button>
-        <button class="btn mode-choice" data-mode="letters">
+        <button class="btn mode-choice" data-testmode="letters">
           <strong data-i18n="mode.lettersTitle"></strong>
           <span data-i18n="mode.lettersText"></span>
         </button>
       </div>
+
+      <h3 data-i18n="mode.eyesLabel"></h3>
+      <div class="mode-choices" id="mode-eyes-choices">
+        <button class="btn mode-choice selected" data-eyemode="monocular">
+          <strong data-i18n="mode.monoTitle"></strong>
+          <span data-i18n="mode.monoText"></span>
+        </button>
+        <button class="btn mode-choice" data-eyemode="binocular">
+          <strong data-i18n="mode.biTitle"></strong>
+          <span data-i18n="mode.biText"></span>
+        </button>
+        <button class="btn mode-choice" data-eyemode="complete">
+          <strong data-i18n="mode.completeTitle"></strong>
+          <span data-i18n="mode.completeText"></span>
+        </button>
+      </div>
+
       <button class="btn primary" id="btn-mode-next" data-i18n="mode.next"></button>
+    </div>
+  </section>
+
+  <!-- ÉTAPE 3b : Distance mesurée manuellement (mode chart) / Manually measured distance -->
+  <section id="step-manual-distance" class="step">
+    <div class="card">
+      <h2 data-i18n="manual.title"></h2>
+      <p data-i18n="manual.text"></p>
+      <label class="range-label" for="manual-distance-input">
+        <span data-i18n="manual.inputLabel"></span>
+      </label>
+      <div id="manual-distance-input-row">
+        <input type="number" id="manual-distance-input" min="30" max="1000" step="1" value="150">
+        <span>cm</span>
+      </div>
+      <p class="hint" id="manual-distance-warning"></p>
+      <button class="btn primary" id="btn-manual-distance-next" data-i18n="manual.next"></button>
     </div>
   </section>
 
   <!-- ÉTAPE 4 : Choix de l'œil / Eye choice -->
   <section id="step-eye" class="step">
     <div class="card">
-      <h2 data-i18n="eye.title"></h2>
-      <p data-i18n="eye.p1"></p>
-      <p data-i18n="eye.p2"></p>
+      <h2 id="eye-title"></h2>
+      <p id="eye-p1"></p>
+      <p id="eye-p2"></p>
+
+      <div id="camera-card">
+        <h3 data-i18n="cam.title"></h3>
+        <p class="hint" data-i18n="cam.text"></p>
+        <video id="cam-video" autoplay playsinline muted hidden></video>
+        <div class="cam-controls">
+          <button class="btn" id="btn-cam-enable" data-i18n="cam.enable"></button>
+        </div>
+        <p class="hint" id="cam-status"></p>
+      </div>
+
       <div class="eye-choices">
-        <button class="btn primary" id="btn-eye-right" data-i18n="eye.startRight"></button>
+        <button class="btn primary" id="btn-first-pass"></button>
       </div>
     </div>
   </section>
@@ -148,6 +200,7 @@
     <div class="card">
       <h2 id="blindspot-title"></h2>
       <div id="blindspot-eye-box"></div>
+      <p class="hint" id="cam-eye-hint-bs"></p>
       <div id="head-align-card">
         <svg id="head-align-graphic" viewBox="0 0 420 180" aria-hidden="true" focusable="false">
           <line class="center-reference" x1="210" y1="0" x2="210" y2="180"/>
@@ -225,7 +278,14 @@
       <span id="test-eye-label"></span>
       <span id="test-line-label"></span>
     </div>
+    <div id="cam-badges" hidden>
+      <span id="cam-badge" hidden><span id="cam-badge-text"></span></span>
+      <span id="cam-badge-angle" hidden><span id="cam-badge-angle-text"></span></span>
+      <span id="cam-badge-eye" hidden><span id="cam-badge-eye-text"></span></span>
+    </div>
     <div id="test-align-warning" data-i18n="test.headAlignReminder"></div>
+    <p class="hint" id="test-precision-note"></p>
+    <div id="cam-reject-banner" hidden></div>
     <div id="optotype-zone">
       <svg id="optotype" viewBox="0 0 5 5" aria-label="optotype E">
         <g id="optotype-g">
@@ -251,13 +311,30 @@
     </div>
   </section>
 
+  <!-- ÉTAPE 6b : Tableau Snellen complet (mode chart) / Full Snellen chart -->
+  <section id="step-chart" class="step">
+    <div id="chart-header">
+      <span id="chart-eye-label"></span>
+    </div>
+    <p class="hint" id="chart-instructions"></p>
+    <p class="hint" id="chart-precision-note"></p>
+    <div id="chart-scroll">
+      <div id="chart-rows"></div>
+    </div>
+    <div class="card controls">
+      <p class="hint" data-i18n="chart.question"></p>
+      <div id="chart-line-buttons"></div>
+      <button class="btn ghost" id="btn-chart-none" data-i18n="chart.none"></button>
+    </div>
+  </section>
+
   <!-- Interlude entre les deux yeux / Switch eyes -->
   <section id="step-switch" class="step">
     <div class="card">
       <h2 data-i18n="switch.title"></h2>
       <p id="switch-result"></p>
-      <p data-i18n="switch.text"></p>
-      <button class="btn primary" id="btn-eye-left" data-i18n="switch.btn"></button>
+      <p id="switch-text"></p>
+      <button class="btn primary" id="btn-second-pass" data-i18n="switch.btn"></button>
     </div>
   </section>
 
@@ -278,6 +355,7 @@
         </thead>
         <tbody></tbody>
       </table>
+      <div class="warning" id="results-precision-warning" hidden></div>
       <p id="results-comment"></p>
       <div class="warning" data-i18n="results.warning"></div>
       <button class="btn primary" id="btn-restart" data-i18n="results.restart"></button>
@@ -288,6 +366,6 @@
     <p data-i18n="footer.text"></p>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20260714-zoom-badges"></script>
 </body>
 </html>
