@@ -77,7 +77,7 @@ const I18N = {
     "mode.chartText": "Tableau complet affiché en une fois, à une distance que vous mesurez vous-même (idéalement ≥ 150 cm). Vous (ou un proche) lisez la plus petite ligne possible.",
     "mode.eTitle": "E directionnel",
     "mode.eText": "Recommandé — le E tourne; vous indiquez la direction de ses branches.",
-    "mode.lettersTitle": "Lettres classiques",
+    "mode.lettersTitle": "Lettres Sloan",
     "mode.lettersText": "Une lettre Sloan apparaît avec une police optotype; vous choisissez ou tapez la lettre vue.",
     "mode.eyesLabel": "Yeux",
     "mode.monoTitle": "Un œil à la fois",
@@ -94,6 +94,7 @@ const I18N = {
     "eye.p1Complete": "Le test complet se fait en trois passes : <strong>œil droit</strong>, <strong>œil gauche</strong>, puis <strong>les deux yeux ensemble</strong>. Gardez vos lunettes ou lentilles si vous en portez habituellement.",
     "eye.p2Interactive": "Un « E » tourné ou une lettre classique va s'afficher, de plus en plus petit. Répondez avec le clavier ou les boutons à l'écran. Si vous ne voyez pas bien, devinez !",
     "eye.p2Chart": "Un tableau complet va s'afficher, du plus grand au plus petit. Lisez-le de haut en bas et indiquez la plus petite ligne que vous pouvez encore lire confortablement.",
+    "eye.displayConditions": "<strong>Avant de commencer :</strong> mettez la luminosité de l'écran au maximum, désactivez Night Shift / filtre de lumière bleue / mode sombre si possible, et placez-vous dans une pièce bien éclairée sans reflet sur l'écran.",
     "eye.startRight": "Commencer — œil droit<br><small>(couvrez l'œil gauche)</small>",
     "eye.startBoth": "Commencer le test",
 
@@ -115,6 +116,7 @@ const I18N = {
     "results.thSnellenM": "Snellen (m)",
     "results.thSnellenFt": "Snellen (pi)",
     "results.thDecimal": "Décimale",
+    "results.thLogmar": "LogMAR ajusté",
     "results.warning": "⚠️ Rappel : ceci est une <strong>estimation à titre indicatif seulement</strong>, sensible à la calibration, à la distance réelle, à l'éclairage et à la qualité de l'écran. Seul un examen par un professionnel de la vue est fiable. En cas de doute ou de changement dans votre vision, consultez.",
     "results.restart": "Refaire le test",
     "results.precisionTitle": "Limite de rendu de l'écran",
@@ -241,7 +243,7 @@ const I18N = {
     "mode.chartText": "Full chart shown at once, at a distance you measure yourself (ideally ≥ 150 cm). You (or a helper) read the smallest line possible.",
     "mode.eTitle": "Tumbling E",
     "mode.eText": "Recommended — the E rotates; you report which way its prongs point.",
-    "mode.lettersTitle": "Regular letters",
+    "mode.lettersTitle": "Sloan letters",
     "mode.lettersText": "A Sloan letter appears in an optotype font; choose or type the letter you see.",
     "mode.eyesLabel": "Eyes",
     "mode.monoTitle": "One eye at a time",
@@ -258,6 +260,7 @@ const I18N = {
     "eye.p1Complete": "The complete test has three passes: <strong>right eye</strong>, <strong>left eye</strong>, then <strong>both eyes together</strong>. Keep your glasses or contacts if you normally wear them.",
     "eye.p2Interactive": "A rotated “E” or a regular letter will appear, getting smaller each time. Answer with the keyboard or the on-screen buttons. If you can't see it clearly, guess!",
     "eye.p2Chart": "A full chart will appear, from biggest to smallest. Read it top to bottom and report the smallest line you can still read comfortably.",
+    "eye.displayConditions": "<strong>Before starting:</strong> set screen brightness to maximum, turn off Night Shift / blue-light filters / dark mode if possible, and use a well-lit room with no glare on the screen.",
     "eye.startRight": "Start — right eye<br><small>(cover your left eye)</small>",
     "eye.startBoth": "Start the test",
 
@@ -279,6 +282,7 @@ const I18N = {
     "results.thSnellenM": "Snellen (m)",
     "results.thSnellenFt": "Snellen (ft)",
     "results.thDecimal": "Decimal",
+    "results.thLogmar": "Adjusted LogMAR",
     "results.warning": "⚠️ Reminder: this is an <strong>estimate for information only</strong>, sensitive to calibration, actual distance, lighting and screen quality. Only an exam by an eye-care professional is reliable. If in doubt, or if your vision changes, get checked.",
     "results.restart": "Take the test again",
     "results.precisionTitle": "Screen rendering limit",
@@ -438,6 +442,7 @@ const state = {
   currentLetter: null,
   lastPassedIndex: -1,
   failedAt: null,
+  lineScores: [],
 };
 
 // distance réellement utilisée pour dimensionner les optotypes
@@ -1498,6 +1503,16 @@ function applyLetterOptotypeSize(el, letter, targetHeightPx) {
   el.style.height = targetHeightPx * 1.35 + "px";
 }
 
+function applyCrowdingSize(targetHeightPx) {
+  const frame = document.getElementById("crowding-frame");
+  const gapPx = targetHeightPx * 0.5;
+  const barPx = Math.max(2, targetHeightPx / 5);
+  frame.style.setProperty("--optotype-size", targetHeightPx + "px");
+  frame.style.setProperty("--crowding-gap", gapPx + "px");
+  frame.style.setProperty("--crowding-bar", barPx + "px");
+  frame.style.setProperty("--crowding-pad", (gapPx + barPx) + "px");
+}
+
 // Largeur de trait minimale, en pixels PHYSIQUES de l'écran (pas en pixels CSS),
 // pour qu'un trait de l'optotype existe comme élément distinct plutôt que de
 // disparaître dans l'anti-crénelage. Le E (grille 5×5) et les lettres ont tous
@@ -1540,6 +1555,7 @@ function startEyeTest(eye) {
   state.lineIndex = 0;
   state.lastPassedIndex = -1;
   state.failedAt = null;
+  state.lineScores = [];
   renderTestMode();
   renderTestEyeIcons();
   renderPrecisionNote(document.getElementById("test-precision-note"), state.precisionLimitedAt, d => `6/${fmt(d)}`);
@@ -1611,6 +1627,7 @@ function startLine() {
 function nextTrial() {
   const denom = state.usableLines[state.lineIndex];
   const px = optotypeHeightPx(denom);
+  applyCrowdingSize(px);
 
   if (state.testMode === "letters") {
     let letter;
@@ -1652,6 +1669,12 @@ function answer(value) {
 }
 
 function passLine() {
+  state.lineScores.push({
+    denominator: state.usableLines[state.lineIndex],
+    correct: state.correctCount,
+    trials: state.trial,
+    passed: true,
+  });
   state.lastPassedIndex = state.lineIndex;
   if (state.lineIndex + 1 >= state.usableLines.length) {
     state.failedAt = null;
@@ -1663,14 +1686,23 @@ function passLine() {
 
 function failLine() {
   state.failedAt = state.usableLines[state.lineIndex] ?? null;
+  state.lineScores.push({
+    denominator: state.failedAt,
+    correct: state.correctCount,
+    trials: state.trial,
+    passed: false,
+  });
   endEyeTest();
 }
 
 function endEyeTest() {
+  const failedScore = state.lineScores.find(s => s.denominator === state.failedAt && !s.passed) ?? null;
   state.results[state.currentEye] = {
     denominator: state.lastPassedIndex >= 0 ? state.usableLines[state.lastPassedIndex] : null,
     precisionLimitedAt: state.precisionLimitedAt,
     failedAt: state.failedAt,
+    failedCorrect: failedScore?.correct ?? 0,
+    lineScores: [...state.lineScores],
   };
   const nextEye = nextEyeAfter(state.currentEye);
   if (nextEye) {
@@ -1783,8 +1815,14 @@ function resultRow(label, res) {
   }
   const d = res.denominator;
   const decimal = fmt((6 / d).toFixed(2));
-  const logmar = fmt(Math.log10(d / 6).toFixed(2));
+  const logmar = fmt(resultLogmar(res).toFixed(2));
   return `<tr><td>${label}</td><td>6/${fmt(d)}</td><td>${feetNotation(d)}</td><td>${decimal}</td><td>${logmar}</td></tr>`;
+}
+
+function resultLogmar(res) {
+  const base = Math.log10(res.denominator / 6);
+  const failedCorrect = Number.isFinite(res.failedCorrect) ? res.failedCorrect : 0;
+  return base - (failedCorrect * 0.02);
 }
 
 function resultTouchesPrecisionLimit(res) {
@@ -1901,6 +1939,7 @@ function refreshLetterMetricSizing() {
     && state.usableLines[state.lineIndex] !== undefined) {
     const px = optotypeHeightPx(state.usableLines[state.lineIndex]);
     applyLetterOptotypeSize(document.getElementById("letter-optotype"), state.currentLetter, px);
+    applyCrowdingSize(px);
   }
   if (document.getElementById("step-chart").classList.contains("active") && state.currentEye) {
     buildChartRows();
@@ -1929,6 +1968,8 @@ function chartAnswer(denominator) {
     denominator,
     precisionLimitedAt: state.precisionLimitedAt,
     failedAt: denominator === null ? state.usableLines[0] : nextHarderLineAfter(denominator, state.usableLines),
+    failedCorrect: 0,
+    lineScores: [],
   };
   const nextEye = nextEyeAfter(state.currentEye);
   if (nextEye) {
@@ -1956,6 +1997,7 @@ document.getElementById("btn-restart").addEventListener("click", () => {
   state.pendingEye = null;
   state.precisionLimitedAt = null;
   state.failedAt = null;
+  state.lineScores = [];
   document.querySelectorAll("#mode-type-choices .mode-choice").forEach(b =>
     b.classList.toggle("selected", b.dataset.testmode === state.testMode));
   document.querySelectorAll("#mode-eyes-choices .mode-choice").forEach(b =>

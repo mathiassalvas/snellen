@@ -155,6 +155,8 @@
       <p id="eye-p1"></p>
       <p id="eye-p2"></p>
 
+      <div class="warning" data-i18n="eye.displayConditions"></div>
+
       <div id="camera-card">
         <h3 data-i18n="cam.title"></h3>
         <p class="hint" data-i18n="cam.text"></p>
@@ -287,12 +289,18 @@
     <p class="hint" id="test-precision-note"></p>
     <div id="cam-reject-banner" hidden></div>
     <div id="optotype-zone">
-      <svg id="optotype" viewBox="0 0 5 5" aria-label="optotype E">
-        <g id="optotype-g">
-          <path d="M0,0 H5 V1 H1 V2 H5 V3 H1 V4 H5 V5 H0 Z" fill="currentColor"/>
-        </g>
-      </svg>
-      <div id="letter-optotype" aria-label="letter optotype"></div>
+      <div id="crowding-frame">
+        <span class="crowding-bar top" aria-hidden="true"></span>
+        <span class="crowding-bar right" aria-hidden="true"></span>
+        <span class="crowding-bar bottom" aria-hidden="true"></span>
+        <span class="crowding-bar left" aria-hidden="true"></span>
+        <svg id="optotype" viewBox="0 0 5 5" aria-label="optotype E">
+          <g id="optotype-g">
+            <path d="M0,0 H5 V1 H1 V2 H5 V3 H1 V4 H5 V5 H0 Z" fill="currentColor"/>
+          </g>
+        </svg>
+        <div id="letter-optotype" aria-label="letter optotype"></div>
+      </div>
     </div>
     <div id="answer-pad-e" class="answer-pad">
       <p class="hint" data-i18n="test.question"></p>
@@ -350,7 +358,7 @@
             <th data-i18n="results.thSnellenM"></th>
             <th data-i18n="results.thSnellenFt"></th>
             <th data-i18n="results.thDecimal"></th>
-            <th>LogMAR</th>
+            <th data-i18n="results.thLogmar"></th>
           </tr>
         </thead>
         <tbody></tbody>

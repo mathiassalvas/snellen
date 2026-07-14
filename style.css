@@ -12,7 +12,9 @@
 
 @font-face {
   font-family: "Optician Sans";
-  src: url("assets/Optician-Sans.otf") format("opentype");
+  src:
+    url("fonts/Optician-Sans.woff2") format("woff2"),
+    url("assets/Optician-Sans.otf") format("opentype");
   font-display: block;
 }
 
@@ -821,6 +823,40 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
   touch-action: none;
 }
 #optotype { display: block; }
+#crowding-frame {
+  --optotype-size: 120px;
+  --crowding-gap: 60px;
+  --crowding-bar: 24px;
+  --crowding-pad: 84px;
+  position: relative;
+  width: calc(var(--optotype-size) + var(--crowding-pad) + var(--crowding-pad));
+  height: calc(var(--optotype-size) + var(--crowding-pad) + var(--crowding-pad));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.crowding-bar {
+  position: absolute;
+  display: block;
+  background: #000000;
+  pointer-events: none;
+}
+.crowding-bar.top,
+.crowding-bar.bottom {
+  width: var(--optotype-size);
+  height: var(--crowding-bar);
+  left: calc(var(--crowding-gap) + var(--crowding-bar));
+}
+.crowding-bar.top { top: 0; }
+.crowding-bar.bottom { bottom: 0; }
+.crowding-bar.left,
+.crowding-bar.right {
+  width: var(--crowding-bar);
+  height: var(--optotype-size);
+  top: calc(var(--crowding-gap) + var(--crowding-bar));
+}
+.crowding-bar.left { left: 0; }
+.crowding-bar.right { right: 0; }
 #letter-optotype {
   display: flex;
   align-items: center;
