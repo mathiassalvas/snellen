@@ -41,11 +41,11 @@ const I18N = {
     "intro.step2": "<strong>Distance</strong> — vérifiée avec votre pouce <em>et</em> votre tache aveugle",
     "intro.step3": "<strong>Test</strong> — tableau Snellen, « E » directionnels ou lettres Sloan, un œil ou les deux",
     "intro.warning": "⚠️ <strong>Ce test n'est pas un examen médical.</strong> Il donne seulement une estimation approximative de votre acuité visuelle. Il ne remplace en aucun cas une consultation chez un optométriste ou un ophtalmologiste. Consultez un professionnel pour tout problème de vision.",
-    "intro.need": "Il vous faut : une carte de crédit (ou toute carte au format standard), un endroit où reculer d'environ 2 mètres, et quelque chose pour couvrir un œil.",
+    "intro.need": "Il vous faut : une carte de crédit (ou toute carte au format standard), assez d'espace pour vous éloigner de l'écran (idéalement au moins environ 1 m), et quelque chose pour couvrir un œil.",
     "intro.start": "Commencer",
 
     "cal.title": "Étape 1 — Calibration de l'écran",
-    "cal.instructions": "Placez une carte de crédit <strong>contre l'écran</strong>, sur le rectangle ci-dessous. Ajustez le curseur jusqu'à ce que le rectangle ait <strong>exactement la même taille</strong> que votre carte.",
+    "cal.instructions": "Placez une carte de crédit, ou toute carte de taille standard, <strong>contre l'écran</strong>, sur le rectangle ci-dessous. Elle sert seulement d'objet de référence pour calibrer l'écran. Le format standard <a href=\"https://en.wikipedia.org/wiki/ISO/IEC_7810\" target=\"_blank\" rel=\"noopener noreferrer\">ISO/IEC 7810 ID-1</a> mesure <strong>85,60 mm × 53,98 mm</strong>. Ajustez le curseur jusqu'à ce que le rectangle ait <strong>exactement la même taille</strong> que votre carte.",
     "cal.smaller": "− plus petit",
     "cal.larger": "+ plus grand",
     "cal.tip": "Astuce : alignez le coin inférieur gauche de la carte avec celui du rectangle, puis ajustez jusqu'à ce que les bords droit et supérieur coïncident. Les flèches gauche/droite du clavier rapetissent ou agrandissent aussi le rectangle.",
@@ -205,11 +205,11 @@ const I18N = {
     "intro.step2": "<strong>Distance</strong> — checked with your thumb <em>and</em> your blind spot",
     "intro.step3": "<strong>Test</strong> — Snellen chart, tumbling “E”, or Sloan letters, one eye or both",
     "intro.warning": "⚠️ <strong>This is not a medical exam.</strong> It only gives a rough estimate of your visual acuity and is no substitute for a visit to an optometrist or ophthalmologist. See a professional for any vision concern.",
-    "intro.need": "You will need: a credit card (or any standard-size card), room to step back about 2 metres (6–7 ft), and something to cover one eye.",
+    "intro.need": "You will need: a credit card (or any standard-size card), enough room to move back from the screen (ideally at least about 1 m / 3 ft), and something to cover one eye.",
     "intro.start": "Start",
 
     "cal.title": "Step 1 — Screen calibration",
-    "cal.instructions": "Hold a credit card <strong>against the screen</strong>, over the rectangle below. Adjust the slider until the rectangle is <strong>exactly the same size</strong> as your card.",
+    "cal.instructions": "Hold a credit card, or any standard-size card, <strong>against the screen</strong>, over the rectangle below. It is only a known-size reference for screen calibration. The standard <a href=\"https://en.wikipedia.org/wiki/ISO/IEC_7810\" target=\"_blank\" rel=\"noopener noreferrer\">ISO/IEC 7810 ID-1</a> size is <strong>85.60 mm × 53.98 mm</strong>. Adjust the slider until the rectangle is <strong>exactly the same size</strong> as your card.",
     "cal.smaller": "− smaller",
     "cal.larger": "+ larger",
     "cal.tip": "Tip: line up the bottom-left corner of the card with the rectangle's, then adjust until the right and top edges match. The keyboard left/right arrows also shrink or enlarge the rectangle.",
@@ -508,9 +508,15 @@ const slider = document.getElementById("card-slider");
 const distanceSlider = document.getElementById("distance-slider");
 
 function renderCard(widthPx) {
+  const markSizePx = Math.round(Math.min(120, Math.max(34, widthPx * 0.075)));
+  const markLinePx = Math.round(Math.min(6, Math.max(2, markSizePx / 18)));
+  const markGapPx = markLinePx / 2;
   cardEl.style.width = widthPx + "px";
   cardEl.style.height = widthPx * CARD_RATIO + "px";
   cardEl.style.fontSize = widthPx / 20 + "px";
+  cardEl.style.setProperty("--mark-size", markSizePx + "px");
+  cardEl.style.setProperty("--mark-line", markLinePx + "px");
+  cardEl.style.setProperty("--mark-gap", markGapPx + "px");
 }
 
 function setCardWidth(widthPx) {

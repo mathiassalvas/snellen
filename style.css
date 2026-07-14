@@ -163,14 +163,15 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
 
 #credit-card {
   /* ratio ISO ID-1 : 85.60 x 53.98 mm — hauteur fixée en JS */
+  --mark-size: 38px;
+  --mark-line: 2px;
+  --mark-gap: 4px;
   background: linear-gradient(135deg, #3f5efb, #1e3a8a);
   border-radius: 4.5% / 7.2%; /* ~3.18 mm de rayon de coin */
   position: relative;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
   color: rgba(255, 255, 255, 0.85);
 }
 .corner-mark {
-  --mark-size: 34px;
   position: absolute;
   width: var(--mark-size);
   height: var(--mark-size);
@@ -183,40 +184,35 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
   content: "";
   position: absolute;
   background: currentColor;
-  box-shadow: 0 0 0 2px var(--card-bg);
 }
 .corner-mark::before {
-  width: 2px;
+  width: var(--mark-line);
   height: var(--mark-size);
+  left: calc((var(--mark-size) - var(--mark-line)) / 2);
+  top: 0;
 }
 .corner-mark::after {
   width: var(--mark-size);
-  height: 2px;
+  height: var(--mark-line);
+  left: 0;
+  top: calc((var(--mark-size) - var(--mark-line)) / 2);
 }
 .corner-mark.top-left {
-  left: calc(var(--mark-size) / -2);
-  top: calc(var(--mark-size) / -2);
+  left: calc(var(--mark-size) / -2 - var(--mark-gap));
+  top: calc(var(--mark-size) / -2 - var(--mark-gap));
 }
-.corner-mark.top-left::before { left: calc(var(--mark-size) / 2); top: 0; }
-.corner-mark.top-left::after { left: 0; top: calc(var(--mark-size) / 2); }
 .corner-mark.top-right {
-  right: calc(var(--mark-size) / -2);
-  top: calc(var(--mark-size) / -2);
+  right: calc(var(--mark-size) / -2 - var(--mark-gap));
+  top: calc(var(--mark-size) / -2 - var(--mark-gap));
 }
-.corner-mark.top-right::before { right: calc(var(--mark-size) / 2); top: 0; }
-.corner-mark.top-right::after { right: 0; top: calc(var(--mark-size) / 2); }
 .corner-mark.bottom-left {
-  left: calc(var(--mark-size) / -2);
-  bottom: calc(var(--mark-size) / -2);
+  left: calc(var(--mark-size) / -2 - var(--mark-gap));
+  bottom: calc(var(--mark-size) / -2 - var(--mark-gap));
 }
-.corner-mark.bottom-left::before { left: calc(var(--mark-size) / 2); bottom: 0; }
-.corner-mark.bottom-left::after { left: 0; bottom: calc(var(--mark-size) / 2); }
 .corner-mark.bottom-right {
-  right: calc(var(--mark-size) / -2);
-  bottom: calc(var(--mark-size) / -2);
+  right: calc(var(--mark-size) / -2 - var(--mark-gap));
+  bottom: calc(var(--mark-size) / -2 - var(--mark-gap));
 }
-.corner-mark.bottom-right::before { right: calc(var(--mark-size) / 2); bottom: 0; }
-.corner-mark.bottom-right::after { right: 0; bottom: calc(var(--mark-size) / 2); }
 .cc-chip {
   position: absolute;
   left: 8%; top: 30%;
