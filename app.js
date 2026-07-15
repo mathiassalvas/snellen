@@ -5,9 +5,30 @@
  * ============================================================ */
 const CARD_WIDTH_MM = 85.6;    // carte ISO/IEC 7810 ID-1 / ISO card width
 const CARD_RATIO = 53.98 / 85.6;
-const THUMB_ANGLE_DEG = 2;     // pouce à bout de bras ≈ 2° / thumb at arm's length ≈ 2°
+/*
+ * Thumb visual-angle estimate based on:
+ * O'Shea, R. P. (1991).
+ * Thumb's rule tested: Visual angle of thumb's width is about 2 deg.
+ * Perception, 20, 415–418.
+ *
+ * Mean thumb-width visual angle at arm's length:
+ * approximately 2.12° for the preferred hand.
+ *
+ * Refined estimate:
+ * angleDeg ≈ 0.07 × thumbWidthMm + 0.74
+ */
+const DEFAULT_THUMB_ANGLE_DEG = 2.12; // moyenne O'Shea (1991) pour la main dominante / O'Shea (1991) mean, dominant hand
 const BLINDSPOT_ANGLE_DEG = 13.5; // bord proche de la tache aveugle / near edge of blind spot
 const ARCMIN_5 = (5 / 60) * Math.PI / 180; // 5 minutes d'arc en radians
+
+// O'Shea (1991): estimated thumb visual angle in degrees
+// angle ≈ 0.07 × thumb width in mm + 0.74
+function estimateThumbAngleDeg(thumbWidthMm) {
+  if (!Number.isFinite(thumbWidthMm) || thumbWidthMm <= 0) {
+    return DEFAULT_THUMB_ANGLE_DEG;
+  }
+  return 0.07 * thumbWidthMm + 0.74;
+}
 
 // Lignes du test : dénominateurs Snellen en base 6 m (6/60 ... 6/2.4).
 // Les petites lignes utilisent les conversions exactes des fractions en pieds :
@@ -38,8 +59,8 @@ const I18N = {
     "intro.title": "👁️ Test Snellen - Mathias",
     "intro.lead": "Estimez votre acuité visuelle depuis chez vous, en trois étapes :",
     "intro.step1": "<strong>Calibration</strong> — mesurez votre écran avec une carte de crédit",
-    "intro.step2": "<strong>Distance</strong> — vérifiée avec votre pouce <em>et</em> votre tache aveugle",
-    "intro.step3": "<strong>Test</strong> — tableau Snellen, « E » directionnels ou lettres Sloan, un œil ou les deux",
+    "intro.step2": "<strong>Test</strong> — tableau Snellen, « E » directionnels ou lettres Sloan, un œil ou les deux",
+    "intro.step3": "<strong>Distance</strong> — vérifiée avec votre pouce <em>et</em> votre tache aveugle",
     "intro.warning": "⚠️ <strong>Ce test n'est pas un examen médical.</strong> Il donne seulement une estimation approximative de votre acuité visuelle. Il ne remplace en aucun cas une consultation chez un optométriste ou un ophtalmologiste. Consultez un professionnel pour tout problème de vision.",
     "intro.need": "Il vous faut : une carte de crédit (ou toute carte au format standard), assez d'espace pour vous éloigner de l'écran (idéalement au moins environ 1 m), et quelque chose pour couvrir un œil.",
     "intro.start": "Commencer",
@@ -52,25 +73,31 @@ const I18N = {
     "cal.done": "Le rectangle correspond à ma carte ✓",
     zoomChangedWarning: "⚠️ Le zoom du navigateur a changé depuis la calibration. Remettez le zoom à 100 % ou recalibrez l'écran avant de lire les lettres.",
 
-    "dist.title": "Étape 2 — Distance de vision",
-    "dist.choose": "Placez-vous le plus loin possible de l'écran, tout en pouvant encore toucher la barre d'espace et utiliser votre souris ou votre pavé tactile sans avancer.",
-    "dist.thumbTitle": "Méthode 1 — le pouce (≈ 2° d'angle visuel)",
-    "dist.thumbText": "Tendez le bras complètement, pouce levé, un œil fermé. Ajustez le curseur pour changer la taille de la grille jusqu'à ce que votre pouce couvre <em>exactement</em> la barre ci-dessous. Cette étape donne une première estimation de la distance.",
+    "dist.title": "Étape 3 — Distance de vision",
+    "dist.choose": "Placez-vous le plus loin possible de l'écran, tout en pouvant utiliser votre clavier ou votre souris sans avancer.",
+    "dist.thumbTitle": "Méthode 1 — le pouce",
+    "dist.step1Title": "1. Positionnez votre pouce",
+    "dist.step1Text": "Fermez un œil, tendez complètement le bras et levez le pouce devant l'écran.",
+    "dist.step2Title": "2. Ajustez la barre",
+    "dist.step2Text": "Ajustez la barre pour qu'elle corresponde à la largeur de votre pouce. Utilisez le curseur, les boutons ou les flèches du clavier.",
+    "dist.adjustBarLabel": "Ajustez la barre à la largeur de votre pouce",
     "dist.sliderLabel": "Distance estimée",
-    "dist.sliderHint": "Plus vous êtes loin, plus la barre devient large. Vous pouvez utiliser les boutons, le curseur, ou les flèches gauche/droite du clavier.",
     "dist.thumbSmaller": "Plus petit",
     "dist.thumbLarger": "Plus grand",
+    "dist.measureThumbTitle": "📏 Mesurer la largeur de mon pouce — Facultatif",
+    "dist.measureThumbToggle": "Mesurer",
+    "dist.measureThumbInstructions": "Posez la première articulation de votre <strong>pouce dominant</strong> contre l'écran et ajustez la barre pour qu'elle corresponde exactement à sa largeur.",
+    "dist.measureThumbConfirm": "Confirmer cette mesure",
     "dist.blindStart": "Démarrer la mesure",
     "dist.blindRestart": "Refaire la mesure",
     "dist.blindGone": "Il a disparu ! (ou Espace)",
-    "dist.ok": "Continuer ✓",
-    "dist.stay": "Gardez cette position générale. La tache aveugle sera mesurée juste avant chaque œil, pour corriger si vous avez bougé un peu.",
+    "dist.ok": "Confirmer cette distance ✓",
     "dist.headAlignTitle": "Placez votre tête au centre de l'écran",
     "dist.headAlignText": "Avant de démarrer, alignez votre visage avec le milieu de l'écran. Une fois la mesure commencée, gardez la tête immobile et bougez seulement vos yeux, pas votre tête.",
     "dist.blindStay": "Vous devez faire la mesure de la tache aveugle avant de pouvoir commencer le test de cet œil.",
     "dist.startEyeTest": "Commencer le test de cet œil",
 
-    "mode.title": "Étape 3 — Type de test",
+    "mode.title": "Étape 2 — Type de test",
     "mode.text": "Choisissez le type de test, puis si vous testez un œil à la fois, les deux ensemble, ou le test complet.",
     "mode.typeLabel": "Type de test",
     "mode.chartTitle": "Tableau Snellen",
@@ -79,7 +106,7 @@ const I18N = {
     "mode.eText": "Recommandé — le E tourne; vous indiquez la direction de ses branches.",
     "mode.lettersTitle": "Lettres Sloan",
     "mode.lettersText": "Une lettre Sloan apparaît avec une police optotype; vous choisissez ou tapez la lettre vue.",
-    "mode.eyesLabel": "Yeux",
+    "mode.eyesLabel": "Mode d'évaluation",
     "mode.monoTitle": "Un œil à la fois",
     "mode.monoText": "Un résultat séparé par œil — plus précis, deux fois plus long.",
     "mode.biTitle": "Deux yeux ensemble",
@@ -92,7 +119,7 @@ const I18N = {
     "eye.p1Mono": "Le test se fait <strong>un œil à la fois</strong>. Couvrez l'autre œil avec la paume de la main (sans appuyer) ou un cache. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
     "eye.p1Bi": "Le test se fait avec <strong>les deux yeux ouverts</strong> en même temps, sans rien couvrir. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
     "eye.p1Complete": "Le test complet se fait en trois passes : <strong>œil droit</strong>, <strong>œil gauche</strong>, puis <strong>les deux yeux ensemble</strong>. Gardez vos lunettes ou lentilles si vous en portez habituellement.",
-    "eye.p2Interactive": "Un « E » tourné ou une lettre classique va s'afficher, de plus en plus petit. Répondez avec le clavier ou les boutons à l'écran. Si vous ne voyez pas bien, devinez !",
+    "eye.p2Interactive": "Les caractères affichés deviendront progressivement plus petits. Répondez avec le clavier, les boutons à l'écran ou la commande vocale, si elle est activée. En cas d'incertitude, donnez votre meilleure réponse.",
     "eye.p2Chart": "Un tableau complet va s'afficher, du plus grand au plus petit. Lisez-le de haut en bas et indiquez la plus petite ligne que vous pouvez encore lire confortablement.",
     "eye.displayConditions": "<strong>Avant de commencer :</strong> mettez la luminosité de l'écran au maximum, désactivez Night Shift / filtre de lumière bleue / mode sombre si possible, et placez-vous dans une pièce bien éclairée sans reflet sur l'écran.",
     "eye.startRight": "Commencer — œil droit<br><small>(couvrez l'œil gauche)</small>",
@@ -141,7 +168,7 @@ const I18N = {
     bothEyesOpenLabel: "Deux yeux ouverts",
     blindTitle: (measureEye, testEye) => `Tache aveugle — mesure avec l'${measureEye === "right" ? "œil droit" : "œil gauche"} (${testEye === "both" ? "test des deux yeux" : testEye === "right" ? "test de l'œil droit" : "test de l'œil gauche"})`,
     blindEyeBox: (openEye, closedEye) => `Ouvrez l'${openEye}. Fermez l'${closedEye}.`,
-    blindText: (closedEye, openEye, fixSide, direction) => `On mesure la distance avec les deux yeux pour être plus précis. <strong>Fermez l'${closedEye}</strong> et gardez <strong>l'${openEye} ouvert</strong>. Fixez la croix <strong>+</strong> située à ${fixSide} avec l'œil ouvert, <em>sans bouger les yeux</em>. Le point va se déplacer vers ${direction} : cliquez ou appuyez sur <strong>Espace</strong> à l'instant où il disparaît. On répète ${BS_TRIALS} fois.`,
+    blindText: (closedEye, openEye, fixSide, direction) => `<p>On mesure la distance avec les deux yeux pour être plus précis.</p><ol class="bs-steps"><li>Fermez l'<strong>${closedEye}</strong> et gardez l'<strong>${openEye} ouvert</strong>.</li><li>Fixez la croix <strong>+</strong> située à ${fixSide} avec l'œil ouvert, <em>sans bouger les yeux</em>.</li><li>Cliquez ou appuyez sur <strong>Espace</strong> à l'instant où le point disparaît (il se déplace vers ${direction}).</li></ol><p class="hint">On répète ${BS_TRIALS} fois.</p>`,
     blindZoneInstruction: (closedEye, openEye, fixSide) => `Fermez l'${closedEye}. Fixez la croix à ${fixSide} avec l'${openEye}.`,
     eyeOpenShort: "ouvert",
     eyeClosedShort: "fermé",
@@ -149,7 +176,8 @@ const I18N = {
     bsSwitchEye: "Changez d'œil, puis démarrez la prochaine mesure.",
     startEyeTestLabel: (eye) => eye === "both" ? "Commencer le test (deux yeux)" : `Commencer le test de l'${eye === "right" ? "œil droit" : "œil gauche"}`,
     lineLabel: (d, i, n) => `Ligne 6/${fmt(d)} — optotype ${i}/${n}`,
-    thumbCaption: (cm, m) => `Barre de ${cm} cm — votre pouce doit la couvrir exactement quand vous êtes à ${m} m.`,
+    thumbWidthCaption: (mm) => `Largeur ajustée : ${mm} mm.`,
+    thumbWidthConfirmed: (mm, deg) => `✓ Pouce mesuré à ${mm} mm (angle visuel estimé : ${deg}°). Cette valeur est utilisée pour affiner la barre ci-dessus.`,
     bsTrial: (i, n) => `Mesure ${i}/${n} — fixez la croix, Espace ou clic dès que le point disparaît.`,
     bsEdge: (m) => `⚠️ Essai manqué (max mesurable ici : ~${m} m) — on reprend.`,
     bsTooFar: "⚠️ Point rendu trop loin selon l'estimation au pouce — on reprend.",
@@ -162,7 +190,7 @@ const I18N = {
     bsNone: "Aucune mesure valide — refaites la mesure de la tache aveugle pour commencer le test.",
     bsRequired: "Faites d'abord la mesure de la tache aveugle pour confirmer la distance.",
     useMeasured: (m) => `✓ Le test utilisera la distance mesurée : ${m} m.`,
-    usePending: (m) => `Distance estimée au pouce : ${m} m. Confirmez-la avec la tache aveugle pour commencer le test.`,
+    usePending: (m) => `Distance estimée au pouce : ${m} m.`,
     useNominal: (m) => `Le test utilisera la distance nominale : ${m} m (tache aveugle non mesurée).`,
     rightEyeResult: (txt) => `Œil droit : ${txt}.`,
     approx: (d, ft) => `environ 6/${fmt(d)} (${ft})`,
@@ -179,8 +207,8 @@ const I18N = {
     commentBad: "Au moins un œil est nettement en dessous de 6/12 dans ce test. C'est une bonne raison de prendre rendez-vous chez un professionnel de la vue.",
     commentMid: "Résultat proche de la normale mais pas parfait. Si vous remarquez une gêne au quotidien, un examen professionnel vaut la peine.",
 
-    "cam.title": "📷 Suivi caméra (optionnel)",
-    "cam.text": "Activez votre webcam pour vérifier votre distance à l’écran et l’alignement de votre tête pendant le test. Cela rend le test plus fiable. Si vous êtes trop près, trop loin ou mal aligné, l’essai ne sera pas compté et vous sera reproposé. L’analyse se fait entièrement sur votre appareil avec Google MediaPipe. Aucune image ni donnée de détection n’est envoyée à un serveur.",
+    "cam.title": "📷 Suivi caméra — Facultatif",
+    "cam.text": "La caméra vérifie votre distance et l’alignement de votre tête pendant le test. L’analyse se fait sur votre appareil et aucune image n’est envoyée à un serveur.",
     "cam.enable": "Activer la caméra",
     "cam.disable": "Désactiver la caméra",
     "cam.requesting": "Demande d'accès à la caméra…",
@@ -195,8 +223,9 @@ const I18N = {
     "cam.eyesUnknown": "👁️ Suivez la consigne d'œil",
     "cam.rejectedTrial": "⚠️ Vous vous êtes trop rapproché ou éloigné — reprenez votre position et réessayez.",
 
-    "mic.title": "🎤 Réponse vocale (optionnel) —  — BETA",
-    "mic.text": "Activez votre micro pour répondre à voix haute sans toucher au clavier : dites « haut », « bas », « gauche » ou « droite » pour le E directionnel, ou nommez la lettre que vous voyez. La reconnaissance vocale est fournie par votre navigateur et peut transiter par ses serveurs (selon le navigateur).",
+    "mic.title": "🎤 Réponse vocale — Facultatif · Bêta",
+    "mic.text": "Répondez à voix haute sans utiliser le clavier. Pour le E directionnel, dites « haut », « bas », « gauche » ou « droite ». Pour les lettres Sloan, nommez simplement la lettre affichée.",
+    "mic.textNote": "La reconnaissance vocale est gérée par votre navigateur et peut utiliser ses serveurs.",
     "mic.enable": "Activer le micro",
     "mic.disable": "Désactiver le micro",
     "mic.listening": "✓ Micro actif — répondez à voix haute pendant le test.",
@@ -218,8 +247,8 @@ const I18N = {
     "intro.title": "👁️ Test Snellen - Mathias",
     "intro.lead": "Estimate your visual acuity from home, in three steps:",
     "intro.step1": "<strong>Calibration</strong> — measure your screen with a credit card",
-    "intro.step2": "<strong>Distance</strong> — checked with your thumb <em>and</em> your blind spot",
-    "intro.step3": "<strong>Test</strong> — Snellen chart, tumbling “E”, or Sloan letters, one eye or both",
+    "intro.step2": "<strong>Test</strong> — Snellen chart, tumbling “E”, or Sloan letters, one eye or both",
+    "intro.step3": "<strong>Distance</strong> — checked with your thumb <em>and</em> your blind spot",
     "intro.warning": "⚠️ <strong>This is not a medical exam.</strong> It only gives a rough estimate of your visual acuity and is no substitute for a visit to an optometrist or ophthalmologist. See a professional for any vision concern.",
     "intro.need": "You will need: a credit card (or any standard-size card), enough room to move back from the screen (ideally at least about 1 m / 3 ft), and something to cover one eye.",
     "intro.start": "Start",
@@ -232,25 +261,31 @@ const I18N = {
     "cal.done": "The rectangle matches my card ✓",
     zoomChangedWarning: "⚠️ Browser zoom changed after calibration. Reset zoom to 100% or recalibrate the screen before reading the letters.",
 
-    "dist.title": "Step 2 — Viewing distance",
-    "dist.choose": "Move as far from the screen as possible while still being able to press Space and use your mouse or trackpad without leaning forward.",
-    "dist.thumbTitle": "Method 1 — your thumb (≈ 2° of visual angle)",
-    "dist.thumbText": "Fully extend your arm, thumb up, one eye closed. Adjust the slider to change the grid size until your thumb <em>exactly</em> covers the bar below. This gives a first estimate of your distance.",
+    "dist.title": "Step 3 — Viewing distance",
+    "dist.choose": "Move as far from the screen as possible while still being able to use your keyboard or mouse without leaning forward.",
+    "dist.thumbTitle": "Method 1 — your thumb",
+    "dist.step1Title": "1. Position your thumb",
+    "dist.step1Text": "Close one eye, fully extend your arm, and raise your thumb in front of the screen.",
+    "dist.step2Title": "2. Adjust the bar",
+    "dist.step2Text": "Adjust the bar to match the width of your thumb. Use the slider, the buttons, or the keyboard arrows.",
+    "dist.adjustBarLabel": "Adjust the bar to your thumb's width",
     "dist.sliderLabel": "Estimated distance",
-    "dist.sliderHint": "The farther away you are, the wider the bar becomes. You can use the buttons, the slider, or the keyboard left/right arrows.",
     "dist.thumbSmaller": "Smaller",
     "dist.thumbLarger": "Larger",
+    "dist.measureThumbTitle": "📏 Measure my thumb width — Optional",
+    "dist.measureThumbToggle": "Measure",
+    "dist.measureThumbInstructions": "Place the first knuckle of your <strong>dominant thumb</strong> against the screen and adjust the bar until it exactly matches its width.",
+    "dist.measureThumbConfirm": "Confirm this measurement",
     "dist.blindStart": "Start measuring",
     "dist.blindRestart": "Measure again",
     "dist.blindGone": "It vanished! (or Space)",
-    "dist.ok": "Continue ✓",
-    "dist.stay": "Keep this general position. Your blind spot will be measured right before each eye, so it is okay if you moved a little.",
+    "dist.ok": "Confirm this distance ✓",
     "dist.headAlignTitle": "Center your head with the screen",
     "dist.headAlignText": "Before starting, align your face with the middle of the screen. Once measuring starts, keep your head still and move only your eyes, not your head.",
     "dist.blindStay": "You must complete the blind-spot measurement before starting this eye's test.",
     "dist.startEyeTest": "Start this eye's test",
 
-    "mode.title": "Step 3 — Test type",
+    "mode.title": "Step 2 — Test type",
     "mode.text": "Choose the test type, then whether you're testing one eye at a time, both together, or the complete test.",
     "mode.typeLabel": "Test type",
     "mode.chartTitle": "Snellen chart",
@@ -259,7 +294,7 @@ const I18N = {
     "mode.eText": "Recommended — the E rotates; you report which way its prongs point.",
     "mode.lettersTitle": "Sloan letters",
     "mode.lettersText": "A Sloan letter appears in an optotype font; choose or type the letter you see.",
-    "mode.eyesLabel": "Eyes",
+    "mode.eyesLabel": "Assessment mode",
     "mode.monoTitle": "One eye at a time",
     "mode.monoText": "A separate result per eye — more precise, takes twice as long.",
     "mode.biTitle": "Both eyes together",
@@ -272,7 +307,7 @@ const I18N = {
     "eye.p1Mono": "The test is done <strong>one eye at a time</strong>. Cover the other eye with your palm (without pressing) or an occluder. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
     "eye.p1Bi": "The test is done with <strong>both eyes open</strong> at the same time, nothing covered. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
     "eye.p1Complete": "The complete test has three passes: <strong>right eye</strong>, <strong>left eye</strong>, then <strong>both eyes together</strong>. Keep your glasses or contacts if you normally wear them.",
-    "eye.p2Interactive": "A rotated “E” or a regular letter will appear, getting smaller each time. Answer with the keyboard or the on-screen buttons. If you can't see it clearly, guess!",
+    "eye.p2Interactive": "The displayed characters will get progressively smaller. Answer with the keyboard, the on-screen buttons, or voice input if enabled. If you're unsure, give your best guess.",
     "eye.p2Chart": "A full chart will appear, from biggest to smallest. Read it top to bottom and report the smallest line you can still read comfortably.",
     "eye.displayConditions": "<strong>Before starting:</strong> set screen brightness to maximum, turn off Night Shift / blue-light filters / dark mode if possible, and use a well-lit room with no glare on the screen.",
     "eye.startRight": "Start — right eye<br><small>(cover your left eye)</small>",
@@ -321,7 +356,7 @@ const I18N = {
     bothEyesOpenLabel: "Both eyes open",
     blindTitle: (measureEye, testEye) => `Blind spot — measuring with the ${measureEye === "right" ? "right eye" : "left eye"} (${testEye === "both" ? "both-eyes test" : testEye === "right" ? "right-eye test" : "left-eye test"})`,
     blindEyeBox: (openEye, closedEye) => `Open your ${openEye}. Close your ${closedEye}.`,
-    blindText: (closedEye, openEye, fixSide, direction) => `We measure distance with both eyes for better precision. <strong>Close your ${closedEye}</strong> and keep your <strong>${openEye} open</strong>. Stare at the <strong>+</strong> cross on the ${fixSide} with the open eye, <em>without moving your eyes</em>. The dot will move ${direction}: click or press <strong>Space</strong> the instant it disappears. We repeat ${BS_TRIALS} times.`,
+    blindText: (closedEye, openEye, fixSide, direction) => `<p>We measure distance with both eyes for better precision.</p><ol class="bs-steps"><li>Close your <strong>${closedEye}</strong> and keep your <strong>${openEye} open</strong>.</li><li>Stare at the <strong>+</strong> cross on the ${fixSide} with the open eye, <em>without moving your eyes</em>.</li><li>Click or press <strong>Space</strong> the instant the dot disappears (it moves ${direction}).</li></ol><p class="hint">We repeat ${BS_TRIALS} times.</p>`,
     blindZoneInstruction: (closedEye, openEye, fixSide) => `Close your ${closedEye}. Stare at the cross on the ${fixSide} with your ${openEye}.`,
     eyeOpenShort: "open",
     eyeClosedShort: "closed",
@@ -329,7 +364,8 @@ const I18N = {
     bsSwitchEye: "Switch eyes, then start the next measurement.",
     startEyeTestLabel: (eye) => eye === "both" ? "Start the test (both eyes)" : `Start the ${eye === "right" ? "right-eye" : "left-eye"} test`,
     lineLabel: (d, i, n) => `Line 6/${fmt(d)} — optotype ${i}/${n}`,
-    thumbCaption: (cm, m) => `${cm} cm bar — your thumb should cover it exactly when you are ${m} m away.`,
+    thumbWidthCaption: (mm) => `Adjusted width: ${mm} mm.`,
+    thumbWidthConfirmed: (mm, deg) => `✓ Thumb measured at ${mm} mm (estimated visual angle: ${deg}°). This value is now used to refine the bar above.`,
     bsTrial: (i, n) => `Measure ${i}/${n} — stare at the cross, press Space or click as soon as the dot disappears.`,
     bsEdge: (m) => `⚠️ Missed that trial (max measurable here: ~${m} m) — trying again.`,
     bsTooFar: "⚠️ The dot went too far based on the thumb estimate — trying again.",
@@ -342,7 +378,7 @@ const I18N = {
     bsNone: "No valid measurement — repeat the blind-spot measurement to start the test.",
     bsRequired: "Complete the blind-spot measurement first to confirm the distance.",
     useMeasured: (m) => `✓ The test will use the measured distance: ${m} m.`,
-    usePending: (m) => `Thumb-estimated distance: ${m} m. Confirm it with the blind-spot measurement to start the test.`,
+    usePending: (m) => `Thumb-estimated distance: ${m} m.`,
     useNominal: (m) => `The test will use the nominal distance: ${m} m (blind spot not measured).`,
     rightEyeResult: (txt) => `Right eye: ${txt}.`,
     approx: (d, ft) => `about 6/${fmt(d)} (${ft})`,
@@ -359,8 +395,8 @@ const I18N = {
     commentBad: "At least one eye is clearly below 6/12 on this test. That is a good reason to book an appointment with an eye-care professional.",
     commentMid: "Close to normal but not perfect. If you notice discomfort day to day, a professional exam is worth it.",
 
-    "cam.title": "📷 Camera tracking (optional)",
-    "cam.text": "Enable your webcam to check your distance from the screen and the alignment of your head during the test. This makes the test more reliable. If you are too close, too far, or not properly aligned, the current trial will not be counted and will be shown again. The analysis runs entirely on your device using Google MediaPipe. No image or detection data is sent to a server.",
+    "cam.title": "📷 Camera tracking — Optional",
+    "cam.text": "The camera checks your distance from the screen and the alignment of your head during the test. The analysis runs on your device and no image is sent to a server.",
     "cam.enable": "Enable camera",
     "cam.disable": "Disable camera",
     "cam.requesting": "Requesting camera access…",
@@ -375,8 +411,9 @@ const I18N = {
     "cam.eyesUnknown": "👁️ Follow the eye instruction",
     "cam.rejectedTrial": "⚠️ You moved too close or too far — get back into position and try again.",
 
-    "mic.title": "🎤 Voice answers (optional)  — BETA",
-    "mic.text": "Enable your microphone to answer out loud without touching the keyboard: say \"up\", \"down\", \"left\" or \"right\" for the tumbling E, or name the letter you see. Speech recognition is provided by your browser and may be processed on its servers (depending on the browser).",
+    "mic.title": "🎤 Voice answers — Optional · Beta",
+    "mic.text": "Answer out loud without using the keyboard. For the tumbling E, say \"up\", \"down\", \"left\" or \"right\". For Sloan letters, simply say the letter shown.",
+    "mic.textNote": "Speech recognition is handled by your browser and may use its servers.",
     "mic.enable": "Enable microphone",
     "mic.disable": "Disable microphone",
     "mic.listening": "✓ Microphone active — answer out loud during the test.",
@@ -415,6 +452,7 @@ function applyI18n() {
   document.getElementById("btn-lang-en").classList.toggle("selected", lang === "en");
   // rafraîchit les textes dynamiques visibles / refresh visible dynamic text
   if (state.pxPerMm) renderThumbBar();
+  renderThumbWidthResult();
   if (document.getElementById("step-blindspot").classList.contains("active") && state.currentEye) {
     renderBlindSpotCopy();
   }
@@ -457,6 +495,7 @@ document.querySelectorAll("#lang-toggle .btn").forEach(btn =>
 const state = {
   pxPerMm: null,        // issu de la calibration / from calibration
   calibrationDpr: null, // zoom/densité au moment de la calibration
+  thumbWidthMm: parseFloat(localStorage.getItem("snellen.thumbWidthMm")) || null, // largeur du pouce mesurée (facultatif) / measured thumb width (optional)
   distanceMm: 1500,     // distance nominale choisie / chosen nominal distance
   measuredMm: null,     // distance mesurée par la tache aveugle / blind-spot measurement
   measuredByEye: { right: null, left: null, both: null },
@@ -593,13 +632,12 @@ document.getElementById("btn-calibrated").addEventListener("click", () => {
  * Étape 2a — Distance : méthode du pouce / thumb method
  * ============================================================ */
 function renderThumbBar() {
-  const barMm = 2 * state.distanceMm * Math.tan((THUMB_ANGLE_DEG / 2) * Math.PI / 180);
+  const angleDeg = estimateThumbAngleDeg(state.thumbWidthMm);
+  const barMm = 2 * state.distanceMm * Math.tan((angleDeg / 2) * Math.PI / 180);
   const barPx = barMm * state.pxPerMm;
   document.getElementById("thumb-bar").style.width = barPx + "px";
   distanceSlider.value = state.distanceMm;
   document.getElementById("distance-value").textContent = fmtM(state.distanceMm) + " m";
-  document.getElementById("thumb-caption").textContent =
-    t("thumbCaption")(fmt((barMm / 10).toFixed(1)), fmtM(state.distanceMm));
 }
 
 function setThumbDistance(mm) {
@@ -620,6 +658,72 @@ distanceSlider.addEventListener("input", () => {
 
 document.getElementById("thumb-smaller").addEventListener("click", () => adjustThumbDistance(-10));
 document.getElementById("thumb-larger").addEventListener("click", () => adjustThumbDistance(10));
+
+/* ------------------------------------------------------------
+ * Mesure facultative de la largeur du pouce / optional thumb-width measurement
+ * ------------------------------------------------------------ */
+const thumbWidthSlider = document.getElementById("thumb-width-slider");
+const thumbWidthBar = document.getElementById("thumb-width-bar");
+const thumbWidthCaption = document.getElementById("thumb-width-caption");
+const thumbMeasureToggle = document.getElementById("thumb-measure-toggle");
+const thumbMeasurePanel = document.getElementById("thumb-measure-panel");
+const thumbWidthResult = document.getElementById("thumb-width-result");
+const thumbWidthConfirm = document.getElementById("thumb-width-confirm");
+const thumbVwidthLeft = document.getElementById("thumb-vwidth-left");
+const thumbVwidthRight = document.getElementById("thumb-vwidth-right");
+const thumbVwidthBarLeft = document.getElementById("thumb-vwidth-bar-left");
+const thumbVwidthBarRight = document.getElementById("thumb-vwidth-bar-right");
+
+function renderThumbWidthBar() {
+  const mm = thumbWidthSlider.valueAsNumber;
+  const sizePx = (mm * state.pxPerMm) + "px";
+  thumbWidthBar.style.width = sizePx;
+  thumbVwidthBarLeft.style.height = sizePx;
+  thumbVwidthBarRight.style.height = sizePx;
+  thumbWidthCaption.textContent = t("thumbWidthCaption")(fmt(mm.toFixed(1)));
+}
+
+function renderThumbWidthResult() {
+  if (state.thumbWidthMm === null) {
+    thumbWidthResult.hidden = true;
+    return;
+  }
+  const angleDeg = estimateThumbAngleDeg(state.thumbWidthMm);
+  thumbWidthResult.hidden = false;
+  thumbWidthResult.textContent =
+    t("thumbWidthConfirmed")(fmt(state.thumbWidthMm.toFixed(1)), fmt(angleDeg.toFixed(2)));
+}
+
+thumbWidthSlider.addEventListener("input", renderThumbWidthBar);
+
+function setThumbMeasureExpanded(expanded) {
+  thumbMeasurePanel.hidden = !expanded;
+  thumbMeasureToggle.setAttribute("aria-expanded", String(expanded));
+  thumbVwidthLeft.hidden = !expanded;
+  thumbVwidthRight.hidden = !expanded;
+  if (expanded) {
+    thumbWidthSlider.value = state.thumbWidthMm ?? 20;
+    renderThumbWidthBar();
+    document.getElementById("thumb-measure-card").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+
+function toggleThumbMeasure() {
+  setThumbMeasureExpanded(thumbMeasurePanel.hidden);
+}
+
+thumbMeasureToggle.addEventListener("click", toggleThumbMeasure);
+document.querySelector("#thumb-measure-card h3").addEventListener("click", toggleThumbMeasure);
+
+thumbWidthConfirm.addEventListener("click", () => {
+  state.thumbWidthMm = thumbWidthSlider.valueAsNumber;
+  localStorage.setItem("snellen.thumbWidthMm", state.thumbWidthMm);
+  renderThumbBar();
+  renderThumbWidthResult();
+  setThumbMeasureExpanded(false);
+});
+
+renderThumbWidthResult();
 
 /* ============================================================
  * Étape 2b — Distance : tache aveugle / blind-spot measurement
@@ -643,6 +747,8 @@ const bs = {
   minX: 0,
   plausibleMaxOffsetPx: null,
   direction: 1,
+  speed: 0,       // px/s courant (pour reconstituer une position passée)
+  trialStartedAt: 0, // horodatage du début de l'essai en cours, pour borner la correction
 };
 
 let suppressBsStartClickUntil = 0;
@@ -800,6 +906,8 @@ function bsNextTrial() {
   positionBlindSpotStart();
   bs.running = true;
   const SPEED = Math.max(60, zoneRect.width / 12); // px/s : traversée ~12 s
+  bs.speed = SPEED;
+  bs.trialStartedAt = performance.now();
   let last = performance.now();
   function step(now) {
     if (!bs.running) return;
@@ -819,10 +927,19 @@ function bsStopAnim() {
   if (bs.animId) cancelAnimationFrame(bs.animId);
 }
 
-function bsGone() {
+// atTime : instant réel où le point a disparu du point de vue de la personne
+// (par défaut maintenant, pour le clic/Espace qui réagissent sans délai).
+// La réponse vocale, elle, n'est confirmée par le navigateur qu'après un
+// délai de traitement — on reconstitue donc la position du point à l'instant
+// où la personne a commencé à parler plutôt qu'à l'instant où la
+// reconnaissance a fini de traiter cette réponse, sans quoi la mesure serait
+// systématiquement biaisée vers une tache aveugle trop grande.
+function bsGone(atTime = performance.now()) {
   if (!bs.running) return;
+  const clampedAtTime = Math.min(performance.now(), Math.max(bs.trialStartedAt, atTime));
+  const dotXAtTime = bs.dotX - bs.direction * bs.speed * (performance.now() - clampedAtTime) / 1000;
   bsStopAnim();
-  bs.samples.push(Math.abs(bs.dotX - bs.crossX));
+  bs.samples.push(Math.abs(dotXAtTime - bs.crossX));
   renderBlindSpotProgress();
   bsAdvance();
 }
@@ -943,7 +1060,7 @@ document.getElementById("btn-bs-start").addEventListener("click", e => {
   }
   bsStart();
 });
-document.getElementById("btn-bs-gone").addEventListener("click", bsGone);
+document.getElementById("btn-bs-gone").addEventListener("click", () => bsGone());
 document.getElementById("btn-start-eye-test").addEventListener("click", () => {
   if (state.measuredByEye[state.currentEye] === null) {
     document.getElementById("bs-result").innerHTML = `<span class="bs-warn">${t("bsRequired")}</span>`;
@@ -1029,6 +1146,23 @@ function renderEyeStep() {
   document.getElementById("mic-card").hidden = isChart;
   renderMicExpectedWords();
 }
+
+function initCollapsible(toggleId, bodyId) {
+  const toggle = document.getElementById(toggleId);
+  const body = document.getElementById(bodyId);
+  const header = toggle.closest(".collapsible-header");
+  const setExpanded = (expanded) => {
+    toggle.setAttribute("aria-expanded", String(expanded));
+    toggle.textContent = expanded ? "▲" : "▼";
+    body.hidden = !expanded;
+  };
+  const toggleExpanded = () => setExpanded(toggle.getAttribute("aria-expanded") !== "true");
+  toggle.addEventListener("click", toggleExpanded);
+  header.querySelector("h3").addEventListener("click", toggleExpanded);
+}
+
+initCollapsible("camera-toggle", "camera-body");
+initCollapsible("mic-toggle", "mic-body");
 
 function firstEyeForMode() {
   return state.eyeMode === "binocular" ? "both" : "right";
@@ -1530,7 +1664,14 @@ const mic = {
   practiceFadeTimer: null,
   startedAt: 0,      // horodatage du dernier rec.start() réussi, pour détecter les fins prématurées
   rapidEndCount: 0,  // nombre de fins quasi immédiates consécutives (signe d'une boucle qui échoue)
+  // File des horodatages "onspeechstart" (un par bout de parole détecté),
+  // consommée en FIFO à chaque résultat final pour retrouver l'instant où la
+  // personne a commencé à parler plutôt que l'instant, plus tardif, où la
+  // reconnaissance a fini de traiter cette réponse (cf. tache aveugle).
+  speechStartQueue: [],
 };
+
+const MIC_SPEECH_QUEUE_MAX = 5; // borne défensive : évite toute croissance illimitée
 
 // Homophones de transcription par langue et par mode. Les deux modes sont
 // disjoints (jamais actifs en même temps), donc « oh » peut vouloir dire
@@ -1738,6 +1879,9 @@ function toggleMic() {
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const result = event.results[i];
       if (!result.isFinal) continue;
+      // Un seul bout de parole (donc un seul horodatage "onspeechstart") par
+      // résultat final, quel que soit le nombre d'hypothèses alternatives.
+      const speechStartedAt = mic.speechStartQueue.length ? mic.speechStartQueue.shift() : performance.now();
       for (const alt of result) {
         if (testActive) {
           const parsed = parseVoiceAnswer(alt.transcript);
@@ -1749,8 +1893,12 @@ function toggleMic() {
         } else if (blindspotActive && bs.running && parseVoiceConfirm(alt.transcript) !== null) {
           // « oui »/« yes » = équivalent vocal du clic ou de la touche Espace
           // quand le point disparaît ; bsGone() se re-garde déjà avec bs.running.
+          // On utilise l'instant où la personne a commencé à parler plutôt que
+          // l'instant, plus tardif, où la reconnaissance a fini de traiter la
+          // réponse — sinon la mesure serait biaisée vers une tache aveugle
+          // trop grande à cause du délai de traitement vocal.
           showMicHeard(alt.transcript.trim());
-          bsGone();
+          bsGone(speechStartedAt);
           break;
         } else if (eyeStepActive) {
           // Zone d'essai avant le test : on teste la transcription contre les
@@ -1767,6 +1915,10 @@ function toggleMic() {
   };
   rec.onstart = () => {
     mic.startedAt = performance.now();
+  };
+  rec.onspeechstart = () => {
+    mic.speechStartQueue.push(performance.now());
+    if (mic.speechStartQueue.length > MIC_SPEECH_QUEUE_MAX) mic.speechStartQueue.shift();
   };
   rec.onerror = (event) => {
     if (event.error === "not-allowed" || event.error === "service-not-allowed") {
@@ -1834,6 +1986,7 @@ function disableMic() {
     try { mic.recognition.stop(); } catch { /* déjà arrêté */ }
     mic.recognition = null;
   }
+  mic.speechStartQueue = [];
   renderMicStatus();
   renderMicBadge();
   const btn = document.getElementById("btn-mic-enable");

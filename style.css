@@ -43,6 +43,8 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 18px;
   line-height: 1.65;
+  /* évite un scroll horizontal parasite à cause des éléments plein-bord (100vw) */
+  overflow-x: hidden;
 }
 
 .step { display: none; padding: 2rem 1.25rem 3.5rem; }
@@ -299,7 +301,19 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
 
 h3 { font-size: 1.2rem; margin-top: 1.4rem; margin-bottom: 0; }
 
-#thumb-zone { text-align: center; padding: 2rem 1rem; }
+.thumb-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0.8rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.thumb-steps li { line-height: 1.5; }
+.thumb-steps strong { display: block; }
+.thumb-steps span { color: var(--muted); }
+
+#thumb-zone { text-align: center; padding: 1.5rem 1rem 0.5rem; }
 #thumb-bar {
   height: 60px;
   margin: 0 auto;
@@ -309,10 +323,59 @@ h3 { font-size: 1.2rem; margin-top: 1.4rem; margin-bottom: 0; }
   border-radius: 6px;
 }
 
+#thumb-width-zone { text-align: center; padding: 1rem; }
+#thumb-width-bar {
+  height: 40px;
+  margin: 0 auto;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.22), rgba(255,255,255,0)),
+    repeating-linear-gradient(90deg, var(--fg) 0, var(--fg) 8px, var(--accent) 8px, var(--accent) 16px);
+  border-radius: 6px;
+}
+#thumb-width-slider { width: 100%; accent-color: var(--accent); margin: 0.6rem 0 0.35rem; }
+
+/* Barres verticales de mesure, plaquées sur les bords de l'écran et centrées
+   sur l'encadré de mesure du pouce : plus ergonomique qu'une barre
+   horizontale pour poser le pouce sur le côté (gaucher à gauche, droitier à
+   droite). Visibles seulement pendant la mesure. */
+.thumb-vwidth-track {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 60vh;
+  max-height: 420px;
+  background: repeating-linear-gradient(0deg, var(--border) 0, var(--border) 1px, transparent 1px, transparent 12px);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  z-index: 5;
+}
+.thumb-vwidth-track-left { left: 0; border-left: 3px solid var(--fg); }
+.thumb-vwidth-track-right { right: 0; border-right: 3px solid var(--fg); }
+.thumb-vwidth-fill {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  max-height: 100%;
+  background:
+    linear-gradient(0deg, rgba(255,255,255,0.22), rgba(255,255,255,0)),
+    repeating-linear-gradient(0deg, var(--fg) 0, var(--fg) 8px, var(--accent) 8px, var(--accent) 16px);
+}
+.thumb-vwidth-track-left .thumb-vwidth-fill,
+.thumb-vwidth-track-right .thumb-vwidth-fill { top: 50%; transform: translateY(-50%); }
+
 hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
 
 /* --- Tache aveugle / blind spot --- */
-.bs-controls { text-align: center; margin: 0.8rem 0 0.4rem; }
+.bs-steps {
+  margin: 0.6rem 0 1rem;
+  padding-left: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.bs-steps li { line-height: 1.5; }
+.bs-controls { text-align: center; margin: 0.6rem 0 0; }
 .bs-eye-side {
   position: fixed;
   top: 33vh;
@@ -459,8 +522,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
 #head-align-graphic .arrow-head {
   stroke: var(--accent);
 }
+/* Masqué sur l'écran clair de consigne : le compteur n'est utile que pendant
+   l'essai plein écran assombri, où body.bs-dimmed le rend visible ci-dessous. */
 #bs-progress-box {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   gap: 0.8rem;
@@ -484,6 +549,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
    aveugle) apparaît et disparaît dans cette zone sans jamais déplacer le point
    ou le bouton "Il a disparu" situés juste en dessous. */
 #bs-result { text-align: center; min-height: 3.6em; }
+/* Ces deux zones ne se remplissent que pendant l'essai plein écran assombri
+   (carte masquée) ; vides sur l'écran clair de consigne, elles ne doivent pas
+   réserver cet espace — relique de l'ancien flux où l'essai se faisait ici. */
+#bs-status:empty,
+#bs-result:empty { min-height: 0; }
 .bs-warn { color: #c2620a; }
 
 #bs-zone {
@@ -546,6 +616,7 @@ body.bs-dimmed .bs-gone-controls {
    qui le contenait normalement est masquée pendant l'essai, donc on force ce
    bloc à rester visible et on le fixe en haut de l'écran. */
 body.bs-dimmed #bs-progress-box {
+  display: flex;
   visibility: visible;
   position: fixed;
   top: 1.5rem;
@@ -627,17 +698,45 @@ body.bs-dimmed #bs-progress-box {
   box-shadow: 0 8px 22px rgba(37, 99, 235, 0.24);
 }
 
-/* --- Suivi caméra / camera tracking --- */
-#camera-card,
-#mic-card {
+/* --- Encadrés repliables : suivi caméra, réponse vocale, mesure du pouce --- */
+.collapsible {
   border: 1px dashed var(--border);
   border-radius: 10px;
   padding: 1.1rem 1.25rem;
   margin: 1.25rem 0;
 }
-#camera-card h3,
-#mic-card h3 { margin-top: 0; margin-bottom: 0.3rem; }
+.collapsible h3 { margin: 0; cursor: pointer; }
 #mic-status { min-height: 1.3em; }
+/* Ces paragraphes de statut sont vides tant que la caméra/le micro n'est pas
+   activé : les masquer évite un encadré replié avec beaucoup de vide. */
+#cam-status:empty,
+#mic-status:empty,
+#mic-expected-words:empty { display: none; margin: 0; }
+
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+.collapsible-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.collapse-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 0.3rem 0.4rem;
+  line-height: 1;
+}
+.collapse-toggle:hover { color: var(--fg); }
+.collapsible-body { margin-top: 0.6rem; }
+.collapsible-body p.small { font-size: 0.85rem; color: var(--muted); margin-top: 0.4rem; }
 #mic-expected-words {
   min-height: 1.3em;
   font-weight: 600;
@@ -728,7 +827,6 @@ body.bs-dimmed #mic-badge-row-bs {
   transform: scaleX(-1);
   margin: 0.7rem 0;
 }
-.cam-controls { margin: 0.4rem 0 0.6rem; }
 #cam-status { min-height: 1.3em; }
 
 #cam-badges {
@@ -786,6 +884,9 @@ body.bs-dimmed #mic-badge-row-bs {
 }
 
 #cam-eye-hint-bs { min-height: 3.3em; color: #9c3b0a; font-weight: 700; }
+/* Vide tant que la caméra n'est pas active pendant cette étape : ne pas
+   réserver cet espace évite un grand vide entre les deux encadrés. */
+#cam-eye-hint-bs:empty { display: none; min-height: 0; }
 @media (prefers-color-scheme: dark) {
   #cam-eye-hint-bs { color: #ffb27a; }
 }

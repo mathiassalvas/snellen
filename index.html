@@ -65,7 +65,17 @@
       <h2 data-i18n="dist.title"></h2>
       <p data-i18n="dist.choose"></p>
       <h3 data-i18n="dist.thumbTitle"></h3>
-      <p data-i18n="dist.thumbText"></p>
+      <ol class="thumb-steps">
+        <li><strong data-i18n="dist.step1Title"></strong> <span data-i18n="dist.step1Text"></span></li>
+        <li><strong data-i18n="dist.step2Title"></strong> <span data-i18n="dist.step2Text"></span></li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <p class="hint" data-i18n="dist.adjustBarLabel"></p>
+      <div id="thumb-zone">
+        <div id="thumb-bar"></div>
+      </div>
       <label class="range-label" for="distance-slider">
         <span data-i18n="dist.sliderLabel"></span>
         <strong id="distance-value"></strong>
@@ -75,17 +85,42 @@
         <button class="btn thumb-adjust" id="thumb-smaller" data-i18n="dist.thumbSmaller"></button>
         <button class="btn thumb-adjust" id="thumb-larger" data-i18n="dist.thumbLarger"></button>
       </div>
-      <p class="hint" data-i18n="dist.sliderHint"></p>
     </div>
 
-    <div id="thumb-zone">
-      <div id="thumb-bar"></div>
-      <p class="hint" id="thumb-caption"></p>
+    <div class="card">
+      <div id="thumb-measure-card" class="collapsible">
+        <div class="collapsible-header">
+          <h3 data-i18n="dist.measureThumbTitle"></h3>
+          <div class="collapsible-actions">
+            <button class="btn small" id="thumb-measure-toggle" data-i18n="dist.measureThumbToggle" aria-expanded="false" aria-controls="thumb-measure-panel"></button>
+          </div>
+        </div>
+
+        <div id="thumb-measure-panel" class="collapsible-body" hidden>
+          <p class="hint" data-i18n="dist.measureThumbInstructions"></p>
+          <div id="thumb-width-zone">
+            <div id="thumb-width-bar"></div>
+          </div>
+          <input type="range" id="thumb-width-slider" min="10" max="40" step="0.5" value="20">
+          <p class="hint" id="thumb-width-caption"></p>
+          <button class="btn primary small" id="thumb-width-confirm" data-i18n="dist.measureThumbConfirm"></button>
+        </div>
+        <p class="hint" id="thumb-width-result" hidden></p>
+      </div>
+    </div>
+
+    <!-- Barres verticales de mesure du pouce, plaquées sur les bords de l'écran :
+         plus ergonomique qu'une barre horizontale centrale pour poser le pouce
+         (gaucher à gauche, droitier à droite). Visibles seulement pendant la mesure. -->
+    <div id="thumb-vwidth-left" class="thumb-vwidth-track thumb-vwidth-track-left" hidden>
+      <div id="thumb-vwidth-bar-left" class="thumb-vwidth-fill"></div>
+    </div>
+    <div id="thumb-vwidth-right" class="thumb-vwidth-track thumb-vwidth-track-right" hidden>
+      <div id="thumb-vwidth-bar-right" class="thumb-vwidth-fill"></div>
     </div>
 
     <div class="card controls">
       <button class="btn primary" id="btn-distanced" data-i18n="dist.ok"></button>
-      <p class="hint" data-i18n="dist.stay"></p>
     </div>
   </section>
 
@@ -157,21 +192,32 @@
 
       <div class="warning" data-i18n="eye.displayConditions"></div>
 
-      <div id="camera-card">
-        <h3 data-i18n="cam.title"></h3>
-        <p class="hint" data-i18n="cam.text"></p>
-        <video id="cam-video" autoplay playsinline muted hidden></video>
-        <div class="cam-controls">
-          <button class="btn" id="btn-cam-enable" data-i18n="cam.enable"></button>
+      <div id="camera-card" class="collapsible">
+        <div class="collapsible-header">
+          <h3 data-i18n="cam.title"></h3>
+          <div class="collapsible-actions">
+            <button class="btn small" id="btn-cam-enable" data-i18n="cam.enable"></button>
+            <button type="button" class="collapse-toggle" id="camera-toggle" aria-expanded="false" aria-controls="camera-body">▼</button>
+          </div>
         </div>
+        <div id="camera-body" class="collapsible-body" hidden>
+          <p class="hint" data-i18n="cam.text"></p>
+        </div>
+        <video id="cam-video" autoplay playsinline muted hidden></video>
         <p class="hint" id="cam-status"></p>
       </div>
 
-      <div id="mic-card">
-        <h3 data-i18n="mic.title"></h3>
-        <p class="hint" data-i18n="mic.text"></p>
-        <div class="cam-controls">
-          <button class="btn" id="btn-mic-enable" data-i18n="mic.enable"></button>
+      <div id="mic-card" class="collapsible">
+        <div class="collapsible-header">
+          <h3 data-i18n="mic.title"></h3>
+          <div class="collapsible-actions">
+            <button class="btn small" id="btn-mic-enable" data-i18n="mic.enable"></button>
+            <button type="button" class="collapse-toggle" id="mic-toggle" aria-expanded="false" aria-controls="mic-body">▼</button>
+          </div>
+        </div>
+        <div id="mic-body" class="collapsible-body" hidden>
+          <p class="hint" data-i18n="mic.text"></p>
+          <p class="hint small" data-i18n="mic.textNote"></p>
         </div>
         <p class="hint" id="mic-status"></p>
         <p class="hint" id="mic-expected-words"></p>
@@ -243,7 +289,7 @@
       <div id="mic-badge-row-bs" hidden>
         <span id="mic-badge-bs"><span id="mic-badge-bs-text"></span></span>
       </div>
-      <p id="blindspot-text"></p>
+      <div id="blindspot-text"></div>
       <p class="hint" id="test-distance-note"></p>
       <div class="bs-controls">
         <button class="btn" id="btn-bs-start" data-i18n="dist.blindStart"></button>
