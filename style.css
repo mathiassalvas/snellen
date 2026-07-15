@@ -497,6 +497,62 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
   margin: 1rem 0;
   overflow: hidden;
 }
+
+/* Mode "essai en cours" : le fond blanc plein écran de la zone de mesure
+   éblouit après quelques minutes fixé dans le noir/la pénombre. Pendant
+   l'animation du point (body.bs-dimmed), tout l'écran passe au noir sauf
+   la zone de mesure elle-même, qui devient gris moyen plutôt que blanc pur,
+   avec le texte et la croix de fixation en gris clair — largement assez
+   pour rester lisible sans agresser l'œil qui vient de s'adapter au noir. */
+body.bs-dimmed {
+  background: #000000;
+}
+body.bs-dimmed #lang-toggle,
+body.bs-dimmed footer,
+body.bs-dimmed #step-blindspot > .card {
+  visibility: hidden;
+}
+body.bs-dimmed #bs-zone {
+  /* Toute la largeur de l'écran, bord à bord : le point doit pouvoir
+     parcourir la distance complète pour mesurer correctement même les
+     grandes séparations (personnes éloignées de l'écran) — une largeur
+     plus courte coupait la mesure trop tôt (« essai manqué ») alors que
+     le point n'avait pas fini sa course. */
+  position: fixed;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  width: 100vw;
+  height: 180px;
+  margin: 0;
+  background: rgb(20, 20, 20);
+  border: none;
+  z-index: 6;
+}
+body.bs-dimmed #bs-zone-instruction,
+body.bs-dimmed #bs-cross {
+  color: rgb(190, 190, 190);
+}
+body.bs-dimmed .bs-gone-controls {
+  position: fixed;
+  left: 50%;
+  bottom: 8vh;
+  transform: translateX(-50%);
+  width: min(560px, 92vw);
+  z-index: 6;
+}
+/* Compteur d'essais (X/5), remonté au-dessus de la zone assombrie : la carte
+   qui le contenait normalement est masquée pendant l'essai, donc on force ce
+   bloc à rester visible et on le fixe en haut de l'écran. */
+body.bs-dimmed #bs-progress-box {
+  visibility: visible;
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+}
 #bs-zone.preview {
   height: 0;
   background: transparent;
@@ -572,13 +628,97 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
 }
 
 /* --- Suivi caméra / camera tracking --- */
-#camera-card {
+#camera-card,
+#mic-card {
   border: 1px dashed var(--border);
   border-radius: 10px;
   padding: 1.1rem 1.25rem;
   margin: 1.25rem 0;
 }
-#camera-card h3 { margin-top: 0; margin-bottom: 0.3rem; }
+#camera-card h3,
+#mic-card h3 { margin-top: 0; margin-bottom: 0.3rem; }
+#mic-status { min-height: 1.3em; }
+#mic-expected-words {
+  min-height: 1.3em;
+  font-weight: 600;
+}
+/* Zone d'essai : dès que le micro est actif, on peut prononcer un mot-clé
+   pour vérifier qu'il est bien reconnu avant de démarrer le test. */
+#mic-practice-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  min-height: 1.6em;
+}
+#mic-practice-label {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+#mic-practice-feedback {
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--fg);
+  opacity: 0;
+  transition: opacity 1.1s ease;
+}
+#mic-practice-feedback.visible {
+  opacity: 1;
+  transition: opacity 0.08s ease;
+}
+#mic-practice-feedback.recognized {
+  background: #dcfce7;
+  color: #166534;
+}
+#mic-practice-feedback.unrecognized {
+  background: #fee2e2;
+  color: #991b1b;
+}
+@media (prefers-color-scheme: dark) {
+  #mic-practice-feedback.recognized { background: #14532d; color: #86efac; }
+  #mic-practice-feedback.unrecognized { background: #4a1414; color: #ff9c9c; }
+}
+
+/* Pastille micro pendant le test (et pendant la tache aveugle, où « oui »/
+   « yes » remplace le clic) : rangée séparée des badges caméra pour pouvoir
+   s'afficher même sans caméra ; largeur fixe pour ne jamais faire bouger la
+   mise en page quand le mot entendu change. */
+#mic-badge-row,
+#mic-badge-row-bs {
+  display: flex;
+  justify-content: center;
+  margin: 0.4rem auto 0;
+  width: min(760px, 100%);
+}
+#mic-badge,
+#mic-badge-bs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--border);
+  color: var(--fg);
+}
+/* Pendant l'essai plein écran assombri, la pastille micro rejoint le
+   compteur d'essais en haut au lieu de rester dans la carte masquée. */
+body.bs-dimmed #mic-badge-row-bs {
+  visibility: visible;
+  position: fixed;
+  top: 5.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+}
 #cam-video {
   width: 160px;
   height: 120px;

@@ -194,6 +194,20 @@ const I18N = {
     "cam.tooClose": "📷 Trop proche",
     "cam.eyesUnknown": "👁️ Suivez la consigne d'œil",
     "cam.rejectedTrial": "⚠️ Vous vous êtes trop rapproché ou éloigné — reprenez votre position et réessayez.",
+
+    "mic.title": "🎤 Réponse vocale (optionnel) —  — BETA",
+    "mic.text": "Activez votre micro pour répondre à voix haute sans toucher au clavier : dites « haut », « bas », « gauche » ou « droite » pour le E directionnel, ou nommez la lettre que vous voyez. La reconnaissance vocale est fournie par votre navigateur et peut transiter par ses serveurs (selon le navigateur).",
+    "mic.enable": "Activer le micro",
+    "mic.disable": "Désactiver le micro",
+    "mic.listening": "✓ Micro actif — répondez à voix haute pendant le test.",
+    "mic.denied": "Accès micro refusé. Vous pouvez continuer sans la réponse vocale.",
+    "mic.unsupported": "La reconnaissance vocale n'est pas disponible dans ce navigateur (essayez Chrome ou Edge). Vous pouvez continuer sans elle.",
+    "mic.error": "La reconnaissance vocale n'a pas pu démarrer. Vous pouvez continuer sans elle.",
+    "mic.tryItLabel": "Essayez : dites un des mots ci-dessus →",
+    micIdle: "🎤 À l'écoute…",
+    micHeard: (word) => `🎤 « ${word} »`,
+    micExpectedDirections: "Le micro comprend : « haut », « bas », « gauche », « droite » pendant le test, et « oui » pour confirmer la disparition du point pendant la mesure de distance.",
+    micExpectedLetters: (letters) => `Le micro comprend : les lettres ${letters} pendant le test, et « oui » pour confirmer la disparition du point pendant la mesure de distance.`,
     camLiveDistance: (m) => `📷 ≈ ${m} m`,
     camLiveAngle: (deg) => `🧭 horiz. ${deg}°`,
     camEyeInstruction: (openSide, closedSide) => `👁️ ${openSide === "left" ? "G" : "D"} ouvert / ${closedSide === "left" ? "G" : "D"} fermé`,
@@ -360,6 +374,20 @@ const I18N = {
     "cam.tooClose": "📷 Too close",
     "cam.eyesUnknown": "👁️ Follow the eye instruction",
     "cam.rejectedTrial": "⚠️ You moved too close or too far — get back into position and try again.",
+
+    "mic.title": "🎤 Voice answers (optional)  — BETA",
+    "mic.text": "Enable your microphone to answer out loud without touching the keyboard: say \"up\", \"down\", \"left\" or \"right\" for the tumbling E, or name the letter you see. Speech recognition is provided by your browser and may be processed on its servers (depending on the browser).",
+    "mic.enable": "Enable microphone",
+    "mic.disable": "Disable microphone",
+    "mic.listening": "✓ Microphone active — answer out loud during the test.",
+    "mic.denied": "Microphone access denied. You can continue without voice answers.",
+    "mic.unsupported": "Speech recognition is not available in this browser (try Chrome or Edge). You can continue without it.",
+    "mic.error": "Speech recognition could not start. You can continue without it.",
+    "mic.tryItLabel": "Try it: say one of the words above →",
+    micIdle: "🎤 Listening…",
+    micHeard: (word) => `🎤 "${word}"`,
+    micExpectedDirections: "The microphone understands: \"up\", \"down\", \"left\", \"right\" during the test, and \"yes\" to confirm the dot disappeared during distance measurement.",
+    micExpectedLetters: (letters) => `The microphone understands: the letters ${letters} during the test, and "yes" to confirm the dot disappeared during distance measurement.`,
     camLiveDistance: (m) => `📷 ≈ ${m} m`,
     camLiveAngle: (deg) => `🧭 horiz. ${deg}°`,
     camEyeInstruction: (openSide, closedSide) => `👁️ ${openSide === "left" ? "L" : "R"} open / ${closedSide === "left" ? "L" : "R"} closed`,
@@ -408,6 +436,9 @@ function applyI18n() {
   renderBsResult();
   document.getElementById("btn-cam-enable").textContent = cam.enabled ? t("cam.disable") : t("cam.enable");
   renderCamStatus();
+  document.getElementById("btn-mic-enable").textContent = mic.enabled ? t("mic.disable") : t("mic.enable");
+  renderMicStatus();
+  renderMicBadge();
 }
 
 document.querySelectorAll("#lang-toggle .btn").forEach(btn =>
@@ -415,6 +446,8 @@ document.querySelectorAll("#lang-toggle .btn").forEach(btn =>
     lang = btn.dataset.lang;
     localStorage.setItem("snellen.lang", lang);
     applyI18n();
+    // la reconnaissance vocale doit écouter dans la nouvelle langue
+    restartMicForLanguage();
   })
 );
 
@@ -640,6 +673,7 @@ function showBlindSpotStep(eye) {
   document.getElementById("btn-bs-start").innerHTML = t("dist.blindStart");
   document.getElementById("btn-start-eye-test").disabled = true;
   renderDistanceNote();
+  renderMicBadge();
 }
 
 function showBlindSpotPreview() {
@@ -647,6 +681,7 @@ function showBlindSpotPreview() {
   bsZone.hidden = false;
   bsZone.classList.add("preview");
   bsGoneControls.hidden = true;
+  document.body.classList.remove("bs-dimmed");
   positionBlindSpotPreviewCross();
 }
 
@@ -751,6 +786,7 @@ function bsStart() {
   bsZone.hidden = false;
   bsZone.classList.remove("preview");
   bsGoneControls.hidden = false;
+  document.body.classList.add("bs-dimmed");
   document.getElementById("bs-result").innerHTML = "";
   renderBlindSpotProgress();
   bsNextTrial();
@@ -849,6 +885,7 @@ function bsFinish() {
   } else {
     bsZone.hidden = true;
     bsZone.classList.remove("preview");
+    document.body.classList.remove("bs-dimmed");
     const valid = [bs.distances.right, bs.distances.left].filter(v => v !== null);
     state.measuredMm = valid.length
       ? valid.reduce((sum, value) => sum + value, 0) / valid.length
@@ -920,6 +957,7 @@ document.getElementById("btn-distanced").addEventListener("click", () => {
   bsZone.hidden = true;
   bsZone.classList.remove("preview");
   bsGoneControls.hidden = true;
+  document.body.classList.remove("bs-dimmed");
   renderEyeStep();
   show("step-eye");
 });
@@ -986,6 +1024,10 @@ function renderEyeStep() {
   document.getElementById("eye-p2").innerHTML = isChart ? t("eye.p2Chart") : t("eye.p2Interactive");
   document.getElementById("btn-first-pass").innerHTML = isBinocular ? t("eye.startBoth") : t("eye.startRight");
   document.getElementById("camera-card").hidden = isChart;
+  // La réponse vocale ne sert que pour les optotypes interactifs (directions
+  // du E, noms de lettres) — pas pour la lecture auto-déclarée du tableau.
+  document.getElementById("mic-card").hidden = isChart;
+  renderMicExpectedWords();
 }
 
 function firstEyeForMode() {
@@ -1468,6 +1510,435 @@ function renderCamStatus() {
 document.getElementById("btn-cam-enable").addEventListener("click", toggleCamera);
 
 /* ============================================================
+ * Réponse vocale (optionnelle) — Web Speech API
+ *
+ * Le micro règle le problème du clavier à distance : on répond à voix
+ * haute. La reconnaissance est fournie par le navigateur
+ * (SpeechRecognition) ; selon le navigateur, l'audio peut transiter par
+ * ses serveurs — c'est indiqué dans le texte d'activation. On ne traite
+ * les transcriptions que pendant l'étape de test, et on ne réagit qu'aux
+ * mots attendus par le mode en cours (directions pour le E, noms de
+ * lettres pour le mode lettres) : les homophones fréquents sont mappés
+ * (« eau » → O en mode lettres, mais → « haut » en mode E, etc.).
+ * ============================================================ */
+const mic = {
+  enabled: false,
+  status: "idle", // idle | listening | denied | unsupported | error
+  recognition: null,
+  restartTimer: null,
+  lastHeardTimer: null,
+  practiceFadeTimer: null,
+  startedAt: 0,      // horodatage du dernier rec.start() réussi, pour détecter les fins prématurées
+  rapidEndCount: 0,  // nombre de fins quasi immédiates consécutives (signe d'une boucle qui échoue)
+};
+
+// Homophones de transcription par langue et par mode. Les deux modes sont
+// disjoints (jamais actifs en même temps), donc « oh » peut vouloir dire
+// O en mode lettres et « haut » en mode E sans conflit.
+const VOICE_DIRECTIONS = {
+  fr: {
+    up: ["haut", "en haut", "eau", "au", "oh", "ho"],
+    down: ["bas", "en bas", "bat", "bah"],
+    left: ["gauche", "a gauche", "à gauche"],
+    right: ["droite", "droit", "a droite", "à droite"],
+  },
+  en: {
+    up: ["up", "top"],
+    down: ["down", "bottom"],
+    left: ["left"],
+    right: ["right"],
+  },
+};
+
+// Doit rester synchronisé avec LETTERS (alphabet Sloan : C D H K N O R S V Z).
+const VOICE_LETTERS = {
+  fr: {
+    C: ["c", "cé", "ces", "c'est", "sait", "ses"],
+    D: ["d", "dé", "des", "dais"],
+    H: ["h", "hache", "ash"],
+    K: ["k", "ka"],
+    N: ["n", "enne", "haine", "aine"],
+    O: ["o", "eau", "au", "oh", "ho", "os"],
+    R: ["r", "erre", "air", "aire", "ère"],
+    S: ["s", "esse", "aisse"],
+    V: ["v", "vé"],
+    Z: ["z", "zède", "zed"],
+  },
+  en: {
+    C: ["c", "see", "sea", "si"],
+    D: ["d", "dee", "de"],
+    H: ["h", "aitch", "age"],
+    K: ["k", "kay"],
+    N: ["n", "en"],
+    O: ["o", "oh", "owe"],
+    R: ["r", "are"],
+    S: ["s", "ess"],
+    V: ["v", "vee"],
+    Z: ["z", "zee", "zed"],
+  },
+};
+
+function normalizeVoiceToken(raw) {
+  // minuscules + suppression des accents (é -> e) pour tolérer les variantes
+  // de transcription du navigateur
+  return raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+// Distance de Levenshtein classique (nombre minimal d'insertions/suppressions/
+// substitutions pour passer de a à b) — sert de repli flou ci-dessous.
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp = new Array(n + 1);
+  for (let j = 0; j <= n; j++) dp[j] = j;
+  for (let i = 1; i <= m; i++) {
+    let prevDiag = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1] ? prevDiag : 1 + Math.min(prevDiag, dp[j], dp[j - 1]);
+      prevDiag = tmp;
+    }
+  }
+  return dp[n];
+}
+
+// Cherche la transcription dans une table {valeur: [variantes...]} : essaie
+// d'abord la correspondance exacte (phrase entière, puis mot par mot — la
+// reconnaissance renvoie parfois « la lettre e » ou « vers le haut » —, puis
+// les bigrammes pour « en haut », « à gauche »...). Si rien ne correspond
+// exactement, tente une correspondance floue (distance d'édition) contre les
+// variantes d'au moins 3 lettres : la reconnaissance vocale du navigateur
+// transcrit souvent un mot proche mais pas identique (ex. « ka » entendu
+// « cas »). On exclut les variantes à 1-2 lettres du flou, sinon presque
+// n'importe quel son à une lettre finirait par « matcher » une mauvaise
+// lettre par accident (K et D ont une distance de 1, par exemple).
+// Retourne null si rien n'est reconnu.
+function matchVoiceTable(transcript, table) {
+  const lookup = {};
+  for (const [answerValue, variants] of Object.entries(table)) {
+    for (const v of variants) lookup[normalizeVoiceToken(v)] = answerValue;
+  }
+  const whole = normalizeVoiceToken(transcript);
+  if (lookup[whole] !== undefined) return lookup[whole];
+  const words = whole.split(/\s+/);
+  for (let i = words.length - 1; i >= 0; i--) {
+    if (lookup[words[i]] !== undefined) return lookup[words[i]];
+  }
+  for (let i = words.length - 2; i >= 0; i--) {
+    const pair = words[i] + " " + words[i + 1];
+    if (lookup[pair] !== undefined) return lookup[pair];
+  }
+
+  let bestValue = null;
+  let bestDist = Infinity;
+  for (const [candidate, answerValue] of Object.entries(lookup)) {
+    if (candidate.length < 3) continue; // trop court pour un flou fiable
+    const tolerance = candidate.length <= 4 ? 1 : 2;
+    for (const word of [whole, ...words]) {
+      if (word.length < 3) continue;
+      const dist = levenshtein(word, candidate);
+      if (dist <= tolerance && dist < bestDist) {
+        bestDist = dist;
+        bestValue = answerValue;
+      }
+    }
+  }
+  return bestValue;
+}
+
+// Transforme une transcription en réponse ("up"/"down"/... ou une lettre),
+// selon le mode de test actif. Retourne null si rien d'attendu n'est reconnu.
+function parseVoiceAnswer(transcript, testMode = state.testMode, language = lang) {
+  const table = testMode === "letters" ? VOICE_LETTERS[language] : VOICE_DIRECTIONS[language];
+  if (!table) return null;
+  return matchVoiceTable(transcript, table);
+}
+
+// Mot de confirmation pour la tache aveugle : dire « oui »/« yes » quand le
+// point disparaît, plutôt que de cliquer ou d'appuyer sur Espace (utile
+// puisqu'on ne doit pas bouger la tête/les mains pendant la mesure).
+const VOICE_CONFIRM = {
+  fr: { yes: ["oui", "ouais", "ouai", "wi"] },
+  en: { yes: ["yes", "yeah", "yep", "yup"] },
+};
+
+function parseVoiceConfirm(transcript, language = lang) {
+  const table = VOICE_CONFIRM[language];
+  if (!table) return null;
+  return matchVoiceTable(transcript, table);
+}
+
+function speechRecognitionLang() {
+  return lang === "fr" ? "fr-FR" : "en-US";
+}
+
+// Une reconnaissance qui se termine moins de 800 ms après son démarrage n'a
+// pas pu être coupée par un silence normal (le navigateur laisse largement
+// plus de temps que ça) — c'est le signe d'un échec qui se répète en boucle
+// (souvent lié à la permission micro qui redemande sans cesse). Fonction pure
+// pour rester testable indépendamment du minutage réel du navigateur.
+function isRapidMicEnd(startedAt, now = performance.now()) {
+  return (now - startedAt) < 800;
+}
+
+// Grammaire JSGF listant tout le vocabulaire attendu (réponses du mode de
+// test + « oui »/« yes ») pour la langue donnée. Le support réel de
+// SpeechGrammarList varie beaucoup selon le navigateur (souvent ignoré en
+// pratique), donc ceci est un indice best-effort, pas une garantie.
+function buildVoiceGrammar(language) {
+  const answerTable = state.testMode === "letters" ? VOICE_LETTERS[language] : VOICE_DIRECTIONS[language];
+  const words = new Set();
+  for (const table of [answerTable, VOICE_CONFIRM[language]]) {
+    if (!table) continue;
+    for (const variants of Object.values(table)) {
+      for (const v of variants) words.add(v.replace(/'/g, ""));
+    }
+  }
+  return `#JSGF V1.0; grammar snellen; public <snellen> = ${[...words].join(" | ")} ;`;
+}
+
+function toggleMic() {
+  if (mic.enabled) {
+    disableMic();
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    mic.status = "unsupported";
+    renderMicStatus();
+    return;
+  }
+  const rec = new SR();
+  rec.lang = speechRecognitionLang();
+  rec.continuous = true;
+  rec.interimResults = false;
+  // Plus d'alternatives = plus de chances qu'une des hypothèses du moteur de
+  // reconnaissance corresponde à un mot attendu, même si la meilleure ne l'est pas.
+  rec.maxAlternatives = 6;
+  // Indice de grammaire (vocabulaire attendu) : la plupart des navigateurs
+  // l'ignorent largement en pratique, mais c'est standard, gratuit, et peut
+  // aider sur les moteurs qui en tiennent compte — sans jamais faire de mal.
+  const SGL = window.SpeechGrammarList || window.webkitSpeechGrammarList;
+  if (SGL) {
+    try {
+      const grammarList = new SGL();
+      grammarList.addFromString(buildVoiceGrammar(rec.lang.startsWith("fr") ? "fr" : "en"), 1);
+      rec.grammars = grammarList;
+    } catch { /* grammaire non supportée : on continue sans */ }
+  }
+
+  rec.onresult = (event) => {
+    const testActive = document.getElementById("step-test").classList.contains("active");
+    const blindspotActive = document.getElementById("step-blindspot").classList.contains("active");
+    const eyeStepActive = document.getElementById("step-eye").classList.contains("active");
+    if (!testActive && !blindspotActive && !eyeStepActive) return;
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      if (!result.isFinal) continue;
+      for (const alt of result) {
+        if (testActive) {
+          const parsed = parseVoiceAnswer(alt.transcript);
+          if (parsed !== null) {
+            showMicHeard(alt.transcript.trim());
+            answer(parsed);
+            break;
+          }
+        } else if (blindspotActive && bs.running && parseVoiceConfirm(alt.transcript) !== null) {
+          // « oui »/« yes » = équivalent vocal du clic ou de la touche Espace
+          // quand le point disparaît ; bsGone() se re-garde déjà avec bs.running.
+          showMicHeard(alt.transcript.trim());
+          bsGone();
+          break;
+        } else if (eyeStepActive) {
+          // Zone d'essai avant le test : on teste la transcription contre les
+          // deux vocabulaires possibles (réponses du mode choisi + « oui »/
+          // « yes ») et on affiche le résultat, reconnu ou non, pour que la
+          // personne puisse ajuster sa prononciation avant de commencer.
+          const transcript = alt.transcript.trim();
+          const recognized = parseVoiceAnswer(transcript) !== null || parseVoiceConfirm(transcript) !== null;
+          showMicPracticeFeedback(transcript, recognized);
+          break;
+        }
+      }
+    }
+  };
+  rec.onstart = () => {
+    mic.startedAt = performance.now();
+  };
+  rec.onerror = (event) => {
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      disableMic();
+      mic.status = "denied";
+      renderMicStatus();
+      return;
+    }
+    if (event.error === "audio-capture") {
+      // Aucun micro détecté matériellement : inutile de continuer à réessayer.
+      disableMic();
+      mic.status = "error";
+      renderMicStatus();
+    }
+    // "no-speech" / "aborted" / "network" : bénins, onend relancera l'écoute
+  };
+  rec.onend = () => {
+    if (!(mic.enabled && mic.recognition === rec)) return;
+    // Le navigateur coupe l'écoute après un silence même en mode continu :
+    // c'est normal, on relance. Mais si la reconnaissance se termine presque
+    // instantanément à répétition, ce n'est plus du silence — c'est un échec
+    // en boucle (souvent un souci de permission qui redemande sans cesse
+    // côté navigateur). Mieux vaut s'arrêter proprement que de continuer à
+    // solliciter le navigateur indéfiniment.
+    mic.rapidEndCount = isRapidMicEnd(mic.startedAt) ? mic.rapidEndCount + 1 : 0;
+    if (mic.rapidEndCount >= 4) {
+      disableMic();
+      mic.status = "error";
+      renderMicStatus();
+      return;
+    }
+    clearTimeout(mic.restartTimer);
+    // Délai minimal avant de relancer : pendant cette fenêtre, le micro
+    // n'écoute plus du tout — plus elle est longue, plus on risque de
+    // manquer une réponse dite juste à ce moment-là.
+    mic.restartTimer = setTimeout(() => {
+      if (mic.enabled && mic.recognition === rec) {
+        try { rec.start(); } catch { /* déjà démarré, onend se redéclenchera */ }
+      }
+    }, 80);
+  };
+
+  try {
+    rec.start();
+  } catch {
+    mic.status = "error";
+    renderMicStatus();
+    return;
+  }
+  mic.recognition = rec;
+  mic.enabled = true;
+  mic.status = "listening";
+  mic.rapidEndCount = 0;
+  renderMicStatus();
+  renderMicBadge();
+  document.getElementById("btn-mic-enable").textContent = t("mic.disable");
+}
+
+function disableMic() {
+  mic.enabled = false;
+  mic.status = "idle";
+  clearTimeout(mic.restartTimer);
+  clearTimeout(mic.lastHeardTimer);
+  if (mic.recognition) {
+    try { mic.recognition.stop(); } catch { /* déjà arrêté */ }
+    mic.recognition = null;
+  }
+  renderMicStatus();
+  renderMicBadge();
+  const btn = document.getElementById("btn-mic-enable");
+  if (btn) btn.textContent = t("mic.enable");
+}
+
+// Changement de langue pendant que le micro tourne : on redémarre la
+// reconnaissance dans la nouvelle langue.
+function restartMicForLanguage() {
+  if (!mic.enabled) return;
+  disableMic();
+  toggleMic();
+}
+
+function renderMicStatus() {
+  const el = document.getElementById("mic-status");
+  if (!el) return;
+  const map = {
+    idle: "",
+    listening: t("mic.listening"),
+    denied: t("mic.denied"),
+    unsupported: t("mic.unsupported"),
+    error: t("mic.error"),
+  };
+  el.textContent = map[mic.status] || "";
+}
+
+function renderMicBadge() {
+  const testActive = document.getElementById("step-test").classList.contains("active");
+  const blindspotActive = document.getElementById("step-blindspot").classList.contains("active");
+
+  const row = document.getElementById("mic-badge-row");
+  if (row) {
+    row.hidden = !(mic.enabled && testActive);
+    if (!row.hidden) document.getElementById("mic-badge-text").textContent = t("micIdle");
+  }
+
+  const rowBs = document.getElementById("mic-badge-row-bs");
+  if (rowBs) {
+    rowBs.hidden = !(mic.enabled && blindspotActive);
+    if (!rowBs.hidden) document.getElementById("mic-badge-bs-text").textContent = t("micIdle");
+  }
+
+  // Zone d'essai sur l'écran de préparation : visible dès que le micro est
+  // actif, pour que la personne puisse tester sa prononciation avant de
+  // commencer réellement le test.
+  const practiceRow = document.getElementById("mic-practice-row");
+  if (practiceRow) practiceRow.hidden = !mic.enabled;
+
+  renderMicExpectedWords();
+}
+
+// Affiche brièvement le dernier mot entendu dans la pastille active, puis
+// revient à « À l'écoute… ».
+function showMicHeard(word) {
+  const testActive = document.getElementById("step-test").classList.contains("active");
+  const textId = testActive ? "mic-badge-text" : "mic-badge-bs-text";
+  const textEl = document.getElementById(textId);
+  if (!textEl) return;
+  textEl.textContent = t("micHeard")(word);
+  clearTimeout(mic.lastHeardTimer);
+  mic.lastHeardTimer = setTimeout(() => {
+    if (mic.enabled) textEl.textContent = t("micIdle");
+  }, 1500);
+}
+
+// Sur l'écran de préparation, précise les mots que la reconnaissance
+// attend — combinaison des directions (ou lettres) du mode de test choisi,
+// plus le mot de confirmation « oui »/« yes » utilisé pendant la tache
+// aveugle. N'a de sens que si un micro est actif.
+function renderMicExpectedWords() {
+  const el = document.getElementById("mic-expected-words");
+  if (!el) return;
+  if (!mic.enabled) {
+    el.textContent = "";
+    return;
+  }
+  el.textContent = state.testMode === "letters"
+    ? t("micExpectedLetters")(LETTERS.join(", "))
+    : t("micExpectedDirections");
+}
+
+// Feedback de « zone d'essai » : affiche ce que le micro vient de capter à
+// côté de la pastille, en vert si ça correspond à un mot attendu (direction,
+// lettre ou « oui »/« yes »), en rouge sinon — puis laisse le texte
+// s'estomper tout seul (transition CSS) plutôt que de disparaître d'un coup.
+function showMicPracticeFeedback(transcript, recognized) {
+  const el = document.getElementById("mic-practice-feedback");
+  if (!el) return;
+  el.textContent = recognized ? `« ${transcript} » ✓` : `« ${transcript} »`;
+  el.classList.remove("recognized", "unrecognized", "visible");
+  // force un reflow pour que le retrait de "visible" prenne effet avant
+  // qu'on le remette (sinon pas de fondu si le même mot est redit vite)
+  void el.offsetWidth;
+  el.classList.add(recognized ? "recognized" : "unrecognized");
+  el.classList.add("visible");
+  clearTimeout(mic.practiceFadeTimer);
+  mic.practiceFadeTimer = setTimeout(() => {
+    el.classList.remove("visible");
+  }, 1400);
+}
+
+document.getElementById("btn-mic-enable").addEventListener("click", toggleMic);
+
+/* ============================================================
  * Étapes 3–4 — Test
  * ============================================================ */
 function optotypeHeightPx(denominator, distanceMm = testDistanceMm()) {
@@ -1493,8 +1964,15 @@ function letterGlyphHeightRatio(letter) {
   return ratio;
 }
 
+// Facteur d'échelle UNIQUE pour toute la police, basé sur la hauteur du E
+// (lettre plate de référence, cap height). Les polices optotypes dessinent
+// volontairement les lettres rondes (C, O) ~4 % plus hautes — le « dépassement
+// optique » qui les fait paraître de la même taille que les lettres plates.
+// Normaliser chaque glyphe individuellement à la même hauteur physique
+// écraserait ce dépassement et rétrécirait C et O par rapport au dessin voulu ;
+// on mesure donc une seule fois sur le E et on applique ce ratio partout.
 function letterFontSizeForHeight(letter, targetHeightPx) {
-  return targetHeightPx / letterGlyphHeightRatio(letter);
+  return targetHeightPx / letterGlyphHeightRatio("E");
 }
 
 function applyLetterOptotypeSize(el, letter, targetHeightPx) {
@@ -1562,6 +2040,7 @@ function startEyeTest(eye) {
   startLine();
   show("step-test");
   renderTestHeader();
+  renderMicBadge();
 }
 
 // Avertit si la résolution de l'écran (à la distance de test) empêche
@@ -1835,6 +2314,7 @@ function resultTouchesPrecisionLimit(res) {
 
 function showResults() {
   disableCamera();
+  disableMic();
   const resultEyes = state.eyeMode === "binocular"
     ? ["both"]
     : state.eyeMode === "complete"
@@ -1988,6 +2468,7 @@ document.getElementById("btn-start").addEventListener("click", () => {
   show("step-calibrate");
 });
 document.getElementById("btn-restart").addEventListener("click", () => {
+  document.body.classList.remove("bs-dimmed");
   state.results = {};
   state.measuredMm = null;
   state.measuredByEye = { right: null, left: null, both: null };

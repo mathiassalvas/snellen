@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Test Snellen - Mathias</title>
-  <link rel="stylesheet" href="style.css?v=20260714-zoom-badges">
+  <link rel="stylesheet" href="style.css?v=20260714-mic-sloanfix">
 </head>
 <body>
 
@@ -167,6 +167,20 @@
         <p class="hint" id="cam-status"></p>
       </div>
 
+      <div id="mic-card">
+        <h3 data-i18n="mic.title"></h3>
+        <p class="hint" data-i18n="mic.text"></p>
+        <div class="cam-controls">
+          <button class="btn" id="btn-mic-enable" data-i18n="mic.enable"></button>
+        </div>
+        <p class="hint" id="mic-status"></p>
+        <p class="hint" id="mic-expected-words"></p>
+        <div id="mic-practice-row" hidden>
+          <span id="mic-practice-label" data-i18n="mic.tryItLabel"></span>
+          <span id="mic-practice-feedback"></span>
+        </div>
+      </div>
+
       <div class="eye-choices">
         <button class="btn primary" id="btn-first-pass"></button>
       </div>
@@ -226,6 +240,9 @@
         <strong id="bs-progress-count">0/3</strong>
         <span id="bs-progress-text"></span>
       </div>
+      <div id="mic-badge-row-bs" hidden>
+        <span id="mic-badge-bs"><span id="mic-badge-bs-text"></span></span>
+      </div>
       <p id="blindspot-text"></p>
       <p class="hint" id="test-distance-note"></p>
       <div class="bs-controls">
@@ -284,6 +301,9 @@
       <span id="cam-badge" hidden><span id="cam-badge-text"></span></span>
       <span id="cam-badge-angle" hidden><span id="cam-badge-angle-text"></span></span>
       <span id="cam-badge-eye" hidden><span id="cam-badge-eye-text"></span></span>
+    </div>
+    <div id="mic-badge-row" hidden>
+      <span id="mic-badge"><span id="mic-badge-text"></span></span>
     </div>
     <div id="test-align-warning" data-i18n="test.headAlignReminder"></div>
     <p class="hint" id="test-precision-note"></p>
@@ -374,6 +394,6 @@
     <p data-i18n="footer.text"></p>
   </footer>
 
-  <script src="app.js?v=20260714-zoom-badges"></script>
+  <script src="app.js?v=20260714-mic-sloanfix"></script>
 </body>
 </html>
