@@ -159,10 +159,17 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
 /* --- Calibration --- */
 #card-zone {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  /* Coin supérieur gauche ancré : on pose la carte une seule fois, puis on
+     ajuste la taille sans avoir à la redéplacer à chaque changement. Même
+     max-width/padding gauche que .card, pour que ce coin tombe exactement
+     sous le bord gauche du texte des encadrés blancs au-dessus/en dessous. */
+  justify-content: flex-start;
+  align-items: flex-start;
   min-height: 40vh;
-  padding: 1rem;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1rem 2.25rem;
+  box-sizing: border-box;
 }
 
 #credit-card {
@@ -174,6 +181,10 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
   border-radius: 4.5% / 7.2%; /* ~3.18 mm de rayon de coin */
   position: relative;
   color: rgba(255, 255, 255, 0.85);
+  /* Sans ça, le flex item se laisse comprimer par le max-width de
+     #card-zone (côté droit "écrasé") au lieu de déborder à droite : seul le
+     coin supérieur gauche doit rester une limite, pas la largeur de carte. */
+  flex-shrink: 0;
 }
 .corner-mark {
   position: absolute;
@@ -258,23 +269,6 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
   margin-top: 1rem;
   font-size: 1.05rem;
 }
-#distance-slider {
-  width: 100%;
-  accent-color: var(--accent);
-  margin: 0.6rem 0 0.35rem;
-}
-.thumb-size-controls {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin: 0.8rem 0;
-}
-.btn.thumb-adjust {
-  min-height: 76px;
-  font-size: 1.2rem;
-  font-weight: 700;
-}
-
 .mode-choices {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -301,68 +295,6 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
 
 h3 { font-size: 1.2rem; margin-top: 1.4rem; margin-bottom: 0; }
 
-.thumb-steps {
-  list-style: none;
-  padding: 0;
-  margin: 0.8rem 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-.thumb-steps li { line-height: 1.5; }
-.thumb-steps strong { display: block; }
-.thumb-steps span { color: var(--muted); }
-
-#thumb-zone { text-align: center; padding: 1.5rem 1rem 0.5rem; }
-#thumb-bar {
-  height: 60px;
-  margin: 0 auto;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,0.22), rgba(255,255,255,0)),
-    repeating-linear-gradient(90deg, var(--fg) 0, var(--fg) 8px, var(--accent) 8px, var(--accent) 16px);
-  border-radius: 6px;
-}
-
-#thumb-width-zone { text-align: center; padding: 1rem; }
-#thumb-width-bar {
-  height: 40px;
-  margin: 0 auto;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,0.22), rgba(255,255,255,0)),
-    repeating-linear-gradient(90deg, var(--fg) 0, var(--fg) 8px, var(--accent) 8px, var(--accent) 16px);
-  border-radius: 6px;
-}
-#thumb-width-slider { width: 100%; accent-color: var(--accent); margin: 0.6rem 0 0.35rem; }
-
-/* Barres verticales de mesure, plaquées sur les bords de l'écran et centrées
-   sur l'encadré de mesure du pouce : plus ergonomique qu'une barre
-   horizontale pour poser le pouce sur le côté (gaucher à gauche, droitier à
-   droite). Visibles seulement pendant la mesure. */
-.thumb-vwidth-track {
-  position: fixed;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40px;
-  height: 60vh;
-  max-height: 420px;
-  background: repeating-linear-gradient(0deg, var(--border) 0, var(--border) 1px, transparent 1px, transparent 12px);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  z-index: 5;
-}
-.thumb-vwidth-track-left { left: 0; border-left: 3px solid var(--fg); }
-.thumb-vwidth-track-right { right: 0; border-right: 3px solid var(--fg); }
-.thumb-vwidth-fill {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  max-height: 100%;
-  background:
-    linear-gradient(0deg, rgba(255,255,255,0.22), rgba(255,255,255,0)),
-    repeating-linear-gradient(0deg, var(--fg) 0, var(--fg) 8px, var(--accent) 8px, var(--accent) 16px);
-}
-.thumb-vwidth-track-left .thumb-vwidth-fill,
-.thumb-vwidth-track-right .thumb-vwidth-fill { top: 50%; transform: translateY(-50%); }
 
 hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
 
@@ -441,6 +373,15 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.2rem 0; }
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+#bs-camera-skip {
+  text-align: center;
+  background: color-mix(in srgb, var(--accent) 10%, var(--card-bg));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  margin: 1rem 0;
+}
+#bs-camera-skip-text { margin: 0 0 0.7rem; font-weight: 600; }
 #blindspot-eye-box {
   background: #ffffff;
   color: #000000;
@@ -683,7 +624,26 @@ body.bs-dimmed #bs-progress-box {
   border-radius: 50%;
   background: #d11a2a;
   transform: translate(-50%, -50%);
+  transition: opacity 0.12s ease;
 }
+#bs-dot.bs-dot-captured { opacity: 0; }
+/* Flash de confirmation : montre où la réponse (clic, Espace ou "oui") a été
+   captée, pour qu'on voie clairement que ça a marché — surtout utile pour la
+   voix, où rien d'autre ne confirme visuellement la capture. */
+#bs-dot-confirm {
+  position: absolute;
+  top: 50%;
+  left: 120px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #16a34a;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+#bs-dot-confirm.visible { opacity: 1; }
 .bs-gone-controls {
   display: flex;
   justify-content: center;
@@ -1186,7 +1146,6 @@ footer { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 1r
     font-size: 1.1rem;
   }
   .mode-choices { grid-template-columns: 1fr; }
-  .thumb-size-controls { grid-template-columns: 1fr; }
   #test-header { flex-direction: column; align-items: center; text-align: center; }
   #test-align-warning { font-size: 1rem; }
   #letter-grid { grid-template-columns: repeat(5, 54px); gap: 0.45rem; }

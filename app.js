@@ -5,30 +5,8 @@
  * ============================================================ */
 const CARD_WIDTH_MM = 85.6;    // carte ISO/IEC 7810 ID-1 / ISO card width
 const CARD_RATIO = 53.98 / 85.6;
-/*
- * Thumb visual-angle estimate based on:
- * O'Shea, R. P. (1991).
- * Thumb's rule tested: Visual angle of thumb's width is about 2 deg.
- * Perception, 20, 415–418.
- *
- * Mean thumb-width visual angle at arm's length:
- * approximately 2.12° for the preferred hand.
- *
- * Refined estimate:
- * angleDeg ≈ 0.07 × thumbWidthMm + 0.74
- */
-const DEFAULT_THUMB_ANGLE_DEG = 2.12; // moyenne O'Shea (1991) pour la main dominante / O'Shea (1991) mean, dominant hand
 const BLINDSPOT_ANGLE_DEG = 13.5; // bord proche de la tache aveugle / near edge of blind spot
 const ARCMIN_5 = (5 / 60) * Math.PI / 180; // 5 minutes d'arc en radians
-
-// O'Shea (1991): estimated thumb visual angle in degrees
-// angle ≈ 0.07 × thumb width in mm + 0.74
-function estimateThumbAngleDeg(thumbWidthMm) {
-  if (!Number.isFinite(thumbWidthMm) || thumbWidthMm <= 0) {
-    return DEFAULT_THUMB_ANGLE_DEG;
-  }
-  return 0.07 * thumbWidthMm + 0.74;
-}
 
 // Lignes du test : dénominateurs Snellen en base 6 m (6/60 ... 6/2.4).
 // Les petites lignes utilisent les conversions exactes des fractions en pieds :
@@ -46,7 +24,6 @@ const FEET_EQUIV = { 60: 200, 36: 120, 24: 80, 18: 60, 15: 50, 12: 40, 9: 30, 7.
 const CHART_LINES = [15, 12, 9, 7.5, 6, 4.5, 3.9, 3, 2.4];
 
 const BS_TRIALS = 5; // essais par œil ; on retire le min et le max, puis on moyenne le reste
-const BS_MISMATCH_PCT = 30; // écart pouce/tache-aveugle au-delà duquel on avertit l'utilisateur
 const LETTERS = ["C", "D", "H", "K", "N", "O", "R", "S", "V", "Z"];
 const LETTER_OPTOTYPE_FONT = '"Optician Sans", Arial, Helvetica, sans-serif';
 const LETTER_METRIC_FONT_SIZE = 200;
@@ -59,8 +36,8 @@ const I18N = {
     "intro.title": "👁️ Test Snellen - Mathias",
     "intro.lead": "Estimez votre acuité visuelle depuis chez vous, en trois étapes :",
     "intro.step1": "<strong>Calibration</strong> — mesurez votre écran avec une carte de crédit",
-    "intro.step2": "<strong>Test</strong> — tableau Snellen, « E » directionnels ou lettres Sloan, un œil ou les deux",
-    "intro.step3": "<strong>Distance</strong> — vérifiée avec votre pouce <em>et</em> votre tache aveugle",
+    "intro.step2": "<strong>Test</strong> — tableau Snellen, <em>Tumbling E</em> ou optotype isolé (lettres Sloan), un œil ou les deux",
+    "intro.step3": "<strong>Distance</strong> — mesurée automatiquement avec votre tache aveugle",
     "intro.warning": "⚠️ <strong>Ce test n'est pas un examen médical.</strong> Il donne seulement une estimation approximative de votre acuité visuelle. Il ne remplace en aucun cas une consultation chez un optométriste ou un ophtalmologiste. Consultez un professionnel pour tout problème de vision.",
     "intro.need": "Il vous faut : une carte de crédit (ou toute carte au format standard), assez d'espace pour vous éloigner de l'écran (idéalement au moins environ 1 m), et quelque chose pour couvrir un œil.",
     "intro.start": "Commencer",
@@ -69,56 +46,42 @@ const I18N = {
     "cal.instructions": "Placez une carte de crédit, ou toute carte de taille standard, <strong>contre l'écran</strong>, sur le rectangle ci-dessous. Elle sert seulement d'objet de référence pour calibrer l'écran. Le format standard <a href=\"https://en.wikipedia.org/wiki/ISO/IEC_7810\" target=\"_blank\" rel=\"noopener noreferrer\">ISO/IEC 7810 ID-1</a> mesure <strong>85,60 mm × 53,98 mm</strong>. Ajustez le curseur jusqu'à ce que le rectangle ait <strong>exactement la même taille</strong> que votre carte.",
     "cal.smaller": "− plus petit",
     "cal.larger": "+ plus grand",
-    "cal.tip": "Astuce : alignez le coin inférieur gauche de la carte avec celui du rectangle, puis ajustez jusqu'à ce que les bords droit et supérieur coïncident. Les flèches gauche/droite du clavier rapetissent ou agrandissent aussi le rectangle.",
+    "cal.tip": "Astuce : alignez le coin supérieur gauche de la carte avec celui du rectangle, puis ajustez jusqu'à ce que les bords droit et inférieur coïncident. Les flèches gauche/droite du clavier rapetissent ou agrandissent aussi le rectangle.",
     "cal.done": "Le rectangle correspond à ma carte ✓",
     zoomChangedWarning: "⚠️ Le zoom du navigateur a changé depuis la calibration. Remettez le zoom à 100 % ou recalibrez l'écran avant de lire les lettres.",
 
-    "dist.title": "Étape 3 — Distance de vision",
-    "dist.choose": "Placez-vous le plus loin possible de l'écran, tout en pouvant utiliser votre clavier ou votre souris sans avancer.",
-    "dist.thumbTitle": "Méthode 1 — le pouce",
-    "dist.step1Title": "1. Positionnez votre pouce",
-    "dist.step1Text": "Fermez un œil, tendez complètement le bras et levez le pouce devant l'écran.",
-    "dist.step2Title": "2. Ajustez la barre",
-    "dist.step2Text": "Ajustez la barre pour qu'elle corresponde à la largeur de votre pouce. Utilisez le curseur, les boutons ou les flèches du clavier.",
-    "dist.adjustBarLabel": "Ajustez la barre à la largeur de votre pouce",
-    "dist.sliderLabel": "Distance estimée",
-    "dist.thumbSmaller": "Plus petit",
-    "dist.thumbLarger": "Plus grand",
-    "dist.measureThumbTitle": "📏 Mesurer la largeur de mon pouce — Facultatif",
-    "dist.measureThumbToggle": "Mesurer",
-    "dist.measureThumbInstructions": "Posez la première articulation de votre <strong>pouce dominant</strong> contre l'écran et ajustez la barre pour qu'elle corresponde exactement à sa largeur.",
-    "dist.measureThumbConfirm": "Confirmer cette mesure",
+    "dist.choose": "Placez-vous le plus loin possible de l'écran, tout en pouvant utiliser votre clavier ou votre souris sans avancer. Votre distance sera mesurée juste après, avec la tache aveugle.",
     "dist.blindStart": "Démarrer la mesure",
     "dist.blindRestart": "Refaire la mesure",
     "dist.blindGone": "Il a disparu ! (ou Espace)",
-    "dist.ok": "Confirmer cette distance ✓",
     "dist.headAlignTitle": "Placez votre tête au centre de l'écran",
     "dist.headAlignText": "Avant de démarrer, alignez votre visage avec le milieu de l'écran. Une fois la mesure commencée, gardez la tête immobile et bougez seulement vos yeux, pas votre tête.",
     "dist.blindStay": "Vous devez faire la mesure de la tache aveugle avant de pouvoir commencer le test de cet œil.",
     "dist.startEyeTest": "Commencer le test de cet œil",
+    "dist.remeasureBtn": "Remesurer pour plus de précision",
 
     "mode.title": "Étape 2 — Type de test",
     "mode.text": "Choisissez le type de test, puis si vous testez un œil à la fois, les deux ensemble, ou le test complet.",
     "mode.typeLabel": "Type de test",
     "mode.chartTitle": "Tableau Snellen",
     "mode.chartText": "Tableau complet affiché en une fois, à une distance que vous mesurez vous-même (idéalement ≥ 150 cm). Vous (ou un proche) lisez la plus petite ligne possible.",
-    "mode.eTitle": "E directionnel",
-    "mode.eText": "Recommandé — le E tourne; vous indiquez la direction de ses branches.",
-    "mode.lettersTitle": "Lettres Sloan",
-    "mode.lettersText": "Une lettre Sloan apparaît avec une police optotype; vous choisissez ou tapez la lettre vue.",
+    "mode.eTitle": "<em>Tumbling E</em>",
+    "mode.eText": "Pour les jeunes enfants — le E tourne ; vous indiquez la direction de ses branches.",
+    "mode.lettersTitle": "Optotype isolé (lettres Sloan)",
+    "mode.lettersText": "Recommandé — une lettre Sloan isolée s'affiche seule, sans lignes voisines ni effet d'encombrement ; vous choisissez ou tapez la lettre vue.",
     "mode.eyesLabel": "Mode d'évaluation",
-    "mode.monoTitle": "Un œil à la fois",
+    "mode.monoTitle": "Un œil à la fois (monoculaire)",
     "mode.monoText": "Un résultat séparé par œil — plus précis, deux fois plus long.",
-    "mode.biTitle": "Deux yeux ensemble",
+    "mode.biTitle": "Deux yeux ensemble (binoculaire)",
     "mode.biText": "Un seul résultat rapide, pour vérifier que la vision est ≥ 20/40.",
     "mode.completeTitle": "Test complet",
     "mode.completeText": "Recommandé — trois résultats : œil droit, œil gauche, puis les deux yeux ensemble.",
     "mode.next": "Continuer",
 
     "eye.title": "Étape — Préparation du test",
-    "eye.p1Mono": "Le test se fait <strong>un œil à la fois</strong>. Couvrez l'autre œil avec la paume de la main (sans appuyer) ou un cache. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
-    "eye.p1Bi": "Le test se fait avec <strong>les deux yeux ouverts</strong> en même temps, sans rien couvrir. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
-    "eye.p1Complete": "Le test complet se fait en trois passes : <strong>œil droit</strong>, <strong>œil gauche</strong>, puis <strong>les deux yeux ensemble</strong>. Gardez vos lunettes ou lentilles si vous en portez habituellement.",
+    "eye.p1Mono": "Le test se fait <strong>un œil à la fois</strong> (test monoculaire). Couvrez l'autre œil avec la paume de la main (sans appuyer) ou un cache. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
+    "eye.p1Bi": "Le test se fait avec <strong>les deux yeux ouverts</strong> en même temps (test binoculaire), sans rien couvrir. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
+    "eye.p1Complete": "Le test complet se fait en trois passes : <strong>œil droit</strong>, <strong>œil gauche</strong> (monoculaire), puis <strong>les deux yeux ensemble</strong> (binoculaire). Gardez vos lunettes ou lentilles si vous en portez habituellement.",
     "eye.p2Interactive": "Les caractères affichés deviendront progressivement plus petits. Répondez avec le clavier, les boutons à l'écran ou la commande vocale, si elle est activée. En cas d'incertitude, donnez votre meilleure réponse.",
     "eye.p2Chart": "Un tableau complet va s'afficher, du plus grand au plus petit. Lisez-le de haut en bas et indiquez la plus petite ligne que vous pouvez encore lire confortablement.",
     "eye.displayConditions": "<strong>Avant de commencer :</strong> mettez la luminosité de l'écran au maximum, désactivez Night Shift / filtre de lumière bleue / mode sombre si possible, et placez-vous dans une pièce bien éclairée sans reflet sur l'écran.",
@@ -148,7 +111,7 @@ const I18N = {
     "results.restart": "Refaire le test",
     "results.precisionTitle": "Limite de rendu de l'écran",
 
-    "footer.text": "Test 100 % local — aucune donnée n'est envoyée nulle part. Optotypes : E de Snellen et lettres Sloan.",
+    "footer.text": "Test 100 % local — aucune donnée n'est envoyée nulle part. Optotypes : Tumbling E et lettres Sloan.",
 
     "manual.title": "Étape — Distance mesurée",
     "manual.text": "Avec un ruban ou un mètre, mesurez la distance réelle entre vos yeux et l'écran, puis entrez-la ci-dessous. Au moins 150 cm est recommandé pour une bonne précision — plus c'est loin, mieux c'est.",
@@ -176,21 +139,17 @@ const I18N = {
     bsSwitchEye: "Changez d'œil, puis démarrez la prochaine mesure.",
     startEyeTestLabel: (eye) => eye === "both" ? "Commencer le test (deux yeux)" : `Commencer le test de l'${eye === "right" ? "œil droit" : "œil gauche"}`,
     lineLabel: (d, i, n) => `Ligne 6/${fmt(d)} — optotype ${i}/${n}`,
-    thumbWidthCaption: (mm) => `Largeur ajustée : ${mm} mm.`,
-    thumbWidthConfirmed: (mm, deg) => `✓ Pouce mesuré à ${mm} mm (angle visuel estimé : ${deg}°). Cette valeur est utilisée pour affiner la barre ci-dessus.`,
     bsTrial: (i, n) => `Mesure ${i}/${n} — fixez la croix, Espace ou clic dès que le point disparaît.`,
     bsEdge: (m) => `⚠️ Essai manqué (max mesurable ici : ~${m} m) — on reprend.`,
-    bsTooFar: "⚠️ Point rendu trop loin selon l'estimation au pouce — on reprend.",
+    bsTooFar: "⚠️ Point rendu trop loin — on reprend.",
     bsResult: (m) => `Distance mesurée par la tache aveugle : environ <strong>${m} m</strong>.`,
     bsOneDone: (eye, m) => `Mesure avec l'${eye === "right" ? "œil droit" : "œil gauche"} : environ <strong>${m} m</strong>. Mesurez maintenant l'autre œil.`,
     bsOneInvalid: (eye) => `Mesure avec l'${eye === "right" ? "œil droit" : "œil gauche"} non valide. Mesurez maintenant l'autre œil.`,
     bsBothResult: (r, l, avg) => `Distance mesurée — œil droit : ${r}; œil gauche : ${l}. Moyenne utilisée : <strong>${avg} m</strong>.`,
-    bsCompare: (pct, target) => ` Écart de ${pct} % par rapport à l'estimation au pouce de ${target} m.`,
-    bsMismatchWarning: (pct) => `⚠️ Écart important (${pct} %) entre l'estimation au pouce et la tache aveugle. Vérifiez que vous fixez bien la croix sans bouger les yeux, ou refaites la mesure.`,
     bsNone: "Aucune mesure valide — refaites la mesure de la tache aveugle pour commencer le test.",
     bsRequired: "Faites d'abord la mesure de la tache aveugle pour confirmer la distance.",
     useMeasured: (m) => `✓ Le test utilisera la distance mesurée : ${m} m.`,
-    usePending: (m) => `Distance estimée au pouce : ${m} m.`,
+    bsCameraSkipMessage: (m) => `✓ Distance suivie par la caméra : ${m} m — pas besoin de remesurer.`,
     useNominal: (m) => `Le test utilisera la distance nominale : ${m} m (tache aveugle non mesurée).`,
     rightEyeResult: (txt) => `Œil droit : ${txt}.`,
     approx: (d, ft) => `environ 6/${fmt(d)} (${ft})`,
@@ -208,7 +167,7 @@ const I18N = {
     commentMid: "Résultat proche de la normale mais pas parfait. Si vous remarquez une gêne au quotidien, un examen professionnel vaut la peine.",
 
     "cam.title": "📷 Suivi caméra — Facultatif",
-    "cam.text": "La caméra vérifie votre distance et l’alignement de votre tête pendant le test. L’analyse se fait sur votre appareil et aucune image n’est envoyée à un serveur.",
+    "cam.text": "La caméra vérifie votre distance et l’alignement de votre tête pendant le test. L’analyse se fait sur votre appareil et aucune image n’est envoyée à un serveur. Elle permet aussi d’éviter de remesurer la distance entre chaque œil et pour le test des deux yeux.",
     "cam.enable": "Activer la caméra",
     "cam.disable": "Désactiver la caméra",
     "cam.requesting": "Demande d'accès à la caméra…",
@@ -224,7 +183,7 @@ const I18N = {
     "cam.rejectedTrial": "⚠️ Vous vous êtes trop rapproché ou éloigné — reprenez votre position et réessayez.",
 
     "mic.title": "🎤 Réponse vocale — Facultatif · Bêta",
-    "mic.text": "Répondez à voix haute sans utiliser le clavier. Pour le E directionnel, dites « haut », « bas », « gauche » ou « droite ». Pour les lettres Sloan, nommez simplement la lettre affichée.",
+    "mic.text": "Répondez à voix haute sans utiliser le clavier. Pour le <em>Tumbling E</em>, dites « haut », « bas », « gauche » ou « droite ». Pour les lettres Sloan, nommez simplement la lettre affichée.",
     "mic.textNote": "La reconnaissance vocale est gérée par votre navigateur et peut utiliser ses serveurs.",
     "mic.enable": "Activer le micro",
     "mic.disable": "Désactiver le micro",
@@ -247,8 +206,8 @@ const I18N = {
     "intro.title": "👁️ Test Snellen - Mathias",
     "intro.lead": "Estimate your visual acuity from home, in three steps:",
     "intro.step1": "<strong>Calibration</strong> — measure your screen with a credit card",
-    "intro.step2": "<strong>Test</strong> — Snellen chart, tumbling “E”, or Sloan letters, one eye or both",
-    "intro.step3": "<strong>Distance</strong> — checked with your thumb <em>and</em> your blind spot",
+    "intro.step2": "<strong>Test</strong> — Snellen chart, <em>Tumbling E</em>, or isolated optotype (Sloan letters), one eye or both",
+    "intro.step3": "<strong>Distance</strong> — measured automatically using your blind spot",
     "intro.warning": "⚠️ <strong>This is not a medical exam.</strong> It only gives a rough estimate of your visual acuity and is no substitute for a visit to an optometrist or ophthalmologist. See a professional for any vision concern.",
     "intro.need": "You will need: a credit card (or any standard-size card), enough room to move back from the screen (ideally at least about 1 m / 3 ft), and something to cover one eye.",
     "intro.start": "Start",
@@ -257,56 +216,42 @@ const I18N = {
     "cal.instructions": "Hold a credit card, or any standard-size card, <strong>against the screen</strong>, over the rectangle below. It is only a known-size reference for screen calibration. The standard <a href=\"https://en.wikipedia.org/wiki/ISO/IEC_7810\" target=\"_blank\" rel=\"noopener noreferrer\">ISO/IEC 7810 ID-1</a> size is <strong>85.60 mm × 53.98 mm</strong>. Adjust the slider until the rectangle is <strong>exactly the same size</strong> as your card.",
     "cal.smaller": "− smaller",
     "cal.larger": "+ larger",
-    "cal.tip": "Tip: line up the bottom-left corner of the card with the rectangle's, then adjust until the right and top edges match. The keyboard left/right arrows also shrink or enlarge the rectangle.",
+    "cal.tip": "Tip: line up the top-left corner of the card with the rectangle's, then adjust until the right and bottom edges match. The keyboard left/right arrows also shrink or enlarge the rectangle.",
     "cal.done": "The rectangle matches my card ✓",
     zoomChangedWarning: "⚠️ Browser zoom changed after calibration. Reset zoom to 100% or recalibrate the screen before reading the letters.",
 
-    "dist.title": "Step 3 — Viewing distance",
-    "dist.choose": "Move as far from the screen as possible while still being able to use your keyboard or mouse without leaning forward.",
-    "dist.thumbTitle": "Method 1 — your thumb",
-    "dist.step1Title": "1. Position your thumb",
-    "dist.step1Text": "Close one eye, fully extend your arm, and raise your thumb in front of the screen.",
-    "dist.step2Title": "2. Adjust the bar",
-    "dist.step2Text": "Adjust the bar to match the width of your thumb. Use the slider, the buttons, or the keyboard arrows.",
-    "dist.adjustBarLabel": "Adjust the bar to your thumb's width",
-    "dist.sliderLabel": "Estimated distance",
-    "dist.thumbSmaller": "Smaller",
-    "dist.thumbLarger": "Larger",
-    "dist.measureThumbTitle": "📏 Measure my thumb width — Optional",
-    "dist.measureThumbToggle": "Measure",
-    "dist.measureThumbInstructions": "Place the first knuckle of your <strong>dominant thumb</strong> against the screen and adjust the bar until it exactly matches its width.",
-    "dist.measureThumbConfirm": "Confirm this measurement",
+    "dist.choose": "Move as far from the screen as possible while still being able to use your keyboard or mouse without leaning forward. Your distance will be measured right after, using your blind spot.",
     "dist.blindStart": "Start measuring",
     "dist.blindRestart": "Measure again",
     "dist.blindGone": "It vanished! (or Space)",
-    "dist.ok": "Confirm this distance ✓",
     "dist.headAlignTitle": "Center your head with the screen",
     "dist.headAlignText": "Before starting, align your face with the middle of the screen. Once measuring starts, keep your head still and move only your eyes, not your head.",
     "dist.blindStay": "You must complete the blind-spot measurement before starting this eye's test.",
     "dist.startEyeTest": "Start this eye's test",
+    "dist.remeasureBtn": "Remeasure for more precision",
 
     "mode.title": "Step 2 — Test type",
     "mode.text": "Choose the test type, then whether you're testing one eye at a time, both together, or the complete test.",
     "mode.typeLabel": "Test type",
     "mode.chartTitle": "Snellen chart",
     "mode.chartText": "Full chart shown at once, at a distance you measure yourself (ideally ≥ 150 cm). You (or a helper) read the smallest line possible.",
-    "mode.eTitle": "Tumbling E",
-    "mode.eText": "Recommended — the E rotates; you report which way its prongs point.",
-    "mode.lettersTitle": "Sloan letters",
-    "mode.lettersText": "A Sloan letter appears in an optotype font; choose or type the letter you see.",
+    "mode.eTitle": "<em>Tumbling E</em>",
+    "mode.eText": "For young children — the E rotates; you report which way its prongs point.",
+    "mode.lettersTitle": "Isolated optotype test (Sloan letters)",
+    "mode.lettersText": "Recommended — a single Sloan letter appears alone, without neighboring lines or crowding; choose or type the letter you see.",
     "mode.eyesLabel": "Assessment mode",
-    "mode.monoTitle": "One eye at a time",
+    "mode.monoTitle": "One eye at a time (monocular)",
     "mode.monoText": "A separate result per eye — more precise, takes twice as long.",
-    "mode.biTitle": "Both eyes together",
+    "mode.biTitle": "Both eyes together (binocular)",
     "mode.biText": "One quick result, to check vision is ≥ 20/40.",
     "mode.completeTitle": "Complete test",
     "mode.completeText": "Recommended — three results: right eye, left eye, then both eyes together.",
     "mode.next": "Continue",
 
     "eye.title": "Step — Getting ready",
-    "eye.p1Mono": "The test is done <strong>one eye at a time</strong>. Cover the other eye with your palm (without pressing) or an occluder. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
-    "eye.p1Bi": "The test is done with <strong>both eyes open</strong> at the same time, nothing covered. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
-    "eye.p1Complete": "The complete test has three passes: <strong>right eye</strong>, <strong>left eye</strong>, then <strong>both eyes together</strong>. Keep your glasses or contacts if you normally wear them.",
+    "eye.p1Mono": "The test is done <strong>one eye at a time</strong> (monocular test). Cover the other eye with your palm (without pressing) or an occluder. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
+    "eye.p1Bi": "The test is done with <strong>both eyes open</strong> at the same time (binocular test), nothing covered. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
+    "eye.p1Complete": "The complete test has three passes: <strong>right eye</strong>, <strong>left eye</strong> (monocular), then <strong>both eyes together</strong> (binocular). Keep your glasses or contacts if you normally wear them.",
     "eye.p2Interactive": "The displayed characters will get progressively smaller. Answer with the keyboard, the on-screen buttons, or voice input if enabled. If you're unsure, give your best guess.",
     "eye.p2Chart": "A full chart will appear, from biggest to smallest. Read it top to bottom and report the smallest line you can still read comfortably.",
     "eye.displayConditions": "<strong>Before starting:</strong> set screen brightness to maximum, turn off Night Shift / blue-light filters / dark mode if possible, and use a well-lit room with no glare on the screen.",
@@ -336,7 +281,7 @@ const I18N = {
     "results.restart": "Take the test again",
     "results.precisionTitle": "Screen rendering limit",
 
-    "footer.text": "Runs 100% locally — no data is sent anywhere. Optotypes: Snellen E and Sloan letters.",
+    "footer.text": "Runs 100% locally — no data is sent anywhere. Optotypes: Tumbling E and Sloan letters.",
 
     "manual.title": "Step — Measured distance",
     "manual.text": "Using a tape measure, measure the real distance between your eyes and the screen, then enter it below. At least 150 cm is recommended for good accuracy — farther is better.",
@@ -364,21 +309,17 @@ const I18N = {
     bsSwitchEye: "Switch eyes, then start the next measurement.",
     startEyeTestLabel: (eye) => eye === "both" ? "Start the test (both eyes)" : `Start the ${eye === "right" ? "right-eye" : "left-eye"} test`,
     lineLabel: (d, i, n) => `Line 6/${fmt(d)} — optotype ${i}/${n}`,
-    thumbWidthCaption: (mm) => `Adjusted width: ${mm} mm.`,
-    thumbWidthConfirmed: (mm, deg) => `✓ Thumb measured at ${mm} mm (estimated visual angle: ${deg}°). This value is now used to refine the bar above.`,
     bsTrial: (i, n) => `Measure ${i}/${n} — stare at the cross, press Space or click as soon as the dot disappears.`,
     bsEdge: (m) => `⚠️ Missed that trial (max measurable here: ~${m} m) — trying again.`,
-    bsTooFar: "⚠️ The dot went too far based on the thumb estimate — trying again.",
+    bsTooFar: "⚠️ The dot went too far — trying again.",
     bsResult: (m) => `Distance measured via the blind spot: about <strong>${m} m</strong>.`,
     bsOneDone: (eye, m) => `Measurement with the ${eye === "right" ? "right eye" : "left eye"}: about <strong>${m} m</strong>. Now measure the other eye.`,
     bsOneInvalid: (eye) => `Measurement with the ${eye === "right" ? "right eye" : "left eye"} was not valid. Now measure the other eye.`,
     bsBothResult: (r, l, avg) => `Measured distance — right eye: ${r}; left eye: ${l}. Average used: <strong>${avg} m</strong>.`,
-    bsCompare: (pct, target) => ` That is ${pct}% away from the ${target} m thumb estimate.`,
-    bsMismatchWarning: (pct) => `⚠️ Large gap (${pct}%) between the thumb estimate and the blind-spot measurement. Make sure you're staring at the cross without moving your eyes, or measure again.`,
     bsNone: "No valid measurement — repeat the blind-spot measurement to start the test.",
     bsRequired: "Complete the blind-spot measurement first to confirm the distance.",
     useMeasured: (m) => `✓ The test will use the measured distance: ${m} m.`,
-    usePending: (m) => `Thumb-estimated distance: ${m} m.`,
+    bsCameraSkipMessage: (m) => `✓ Distance tracked by the camera: ${m} m — no need to remeasure.`,
     useNominal: (m) => `The test will use the nominal distance: ${m} m (blind spot not measured).`,
     rightEyeResult: (txt) => `Right eye: ${txt}.`,
     approx: (d, ft) => `about 6/${fmt(d)} (${ft})`,
@@ -396,7 +337,7 @@ const I18N = {
     commentMid: "Close to normal but not perfect. If you notice discomfort day to day, a professional exam is worth it.",
 
     "cam.title": "📷 Camera tracking — Optional",
-    "cam.text": "The camera checks your distance from the screen and the alignment of your head during the test. The analysis runs on your device and no image is sent to a server.",
+    "cam.text": "The camera checks your distance from the screen and the alignment of your head during the test. The analysis runs on your device and no image is sent to a server. It also lets you skip remeasuring the distance between eyes and for the both-eyes test.",
     "cam.enable": "Enable camera",
     "cam.disable": "Disable camera",
     "cam.requesting": "Requesting camera access…",
@@ -412,7 +353,7 @@ const I18N = {
     "cam.rejectedTrial": "⚠️ You moved too close or too far — get back into position and try again.",
 
     "mic.title": "🎤 Voice answers — Optional · Beta",
-    "mic.text": "Answer out loud without using the keyboard. For the tumbling E, say \"up\", \"down\", \"left\" or \"right\". For Sloan letters, simply say the letter shown.",
+    "mic.text": "Answer out loud without using the keyboard. For the <em>Tumbling E</em>, say \"up\", \"down\", \"left\" or \"right\". For Sloan letters, simply say the letter shown.",
     "mic.textNote": "Speech recognition is handled by your browser and may use its servers.",
     "mic.enable": "Enable microphone",
     "mic.disable": "Disable microphone",
@@ -451,8 +392,6 @@ function applyI18n() {
   document.getElementById("btn-lang-fr").classList.toggle("selected", lang === "fr");
   document.getElementById("btn-lang-en").classList.toggle("selected", lang === "en");
   // rafraîchit les textes dynamiques visibles / refresh visible dynamic text
-  if (state.pxPerMm) renderThumbBar();
-  renderThumbWidthResult();
   if (document.getElementById("step-blindspot").classList.contains("active") && state.currentEye) {
     renderBlindSpotCopy();
   }
@@ -495,8 +434,7 @@ document.querySelectorAll("#lang-toggle .btn").forEach(btn =>
 const state = {
   pxPerMm: null,        // issu de la calibration / from calibration
   calibrationDpr: null, // zoom/densité au moment de la calibration
-  thumbWidthMm: parseFloat(localStorage.getItem("snellen.thumbWidthMm")) || null, // largeur du pouce mesurée (facultatif) / measured thumb width (optional)
-  distanceMm: 1500,     // distance nominale choisie / chosen nominal distance
+  distanceMm: 1500,     // distance nominale de repli si la tache aveugle échoue / fallback nominal distance if the blind spot fails
   measuredMm: null,     // distance mesurée par la tache aveugle / blind-spot measurement
   measuredByEye: { right: null, left: null, both: null },
   manualDistanceMm: null, // distance entrée directement (mode chart) / directly entered distance (chart mode)
@@ -582,7 +520,6 @@ blockPageZoomEvents();
  * ============================================================ */
 const cardEl = document.getElementById("credit-card");
 const slider = document.getElementById("card-slider");
-const distanceSlider = document.getElementById("distance-slider");
 
 function renderCard(widthPx) {
   const markSizePx = Math.round(Math.min(120, Math.max(34, widthPx * 0.075)));
@@ -623,107 +560,9 @@ document.getElementById("btn-calibrated").addEventListener("click", () => {
   state.pxPerMm = slider.valueAsNumber / CARD_WIDTH_MM;
   state.calibrationDpr = currentZoomSignature();
   localStorage.setItem("snellen.pxPerMm", state.pxPerMm);
-  renderThumbBar();
   renderDistanceNote();
   show("step-mode");
 });
-
-/* ============================================================
- * Étape 2a — Distance : méthode du pouce / thumb method
- * ============================================================ */
-function renderThumbBar() {
-  const angleDeg = estimateThumbAngleDeg(state.thumbWidthMm);
-  const barMm = 2 * state.distanceMm * Math.tan((angleDeg / 2) * Math.PI / 180);
-  const barPx = barMm * state.pxPerMm;
-  document.getElementById("thumb-bar").style.width = barPx + "px";
-  distanceSlider.value = state.distanceMm;
-  document.getElementById("distance-value").textContent = fmtM(state.distanceMm) + " m";
-}
-
-function setThumbDistance(mm) {
-  const min = Number(distanceSlider.min);
-  const max = Number(distanceSlider.max);
-  state.distanceMm = Math.min(max, Math.max(min, mm));
-  renderThumbBar();
-  renderDistanceNote();
-}
-
-function adjustThumbDistance(deltaMm) {
-  setThumbDistance(state.distanceMm + deltaMm);
-}
-
-distanceSlider.addEventListener("input", () => {
-  setThumbDistance(distanceSlider.valueAsNumber);
-});
-
-document.getElementById("thumb-smaller").addEventListener("click", () => adjustThumbDistance(-10));
-document.getElementById("thumb-larger").addEventListener("click", () => adjustThumbDistance(10));
-
-/* ------------------------------------------------------------
- * Mesure facultative de la largeur du pouce / optional thumb-width measurement
- * ------------------------------------------------------------ */
-const thumbWidthSlider = document.getElementById("thumb-width-slider");
-const thumbWidthBar = document.getElementById("thumb-width-bar");
-const thumbWidthCaption = document.getElementById("thumb-width-caption");
-const thumbMeasureToggle = document.getElementById("thumb-measure-toggle");
-const thumbMeasurePanel = document.getElementById("thumb-measure-panel");
-const thumbWidthResult = document.getElementById("thumb-width-result");
-const thumbWidthConfirm = document.getElementById("thumb-width-confirm");
-const thumbVwidthLeft = document.getElementById("thumb-vwidth-left");
-const thumbVwidthRight = document.getElementById("thumb-vwidth-right");
-const thumbVwidthBarLeft = document.getElementById("thumb-vwidth-bar-left");
-const thumbVwidthBarRight = document.getElementById("thumb-vwidth-bar-right");
-
-function renderThumbWidthBar() {
-  const mm = thumbWidthSlider.valueAsNumber;
-  const sizePx = (mm * state.pxPerMm) + "px";
-  thumbWidthBar.style.width = sizePx;
-  thumbVwidthBarLeft.style.height = sizePx;
-  thumbVwidthBarRight.style.height = sizePx;
-  thumbWidthCaption.textContent = t("thumbWidthCaption")(fmt(mm.toFixed(1)));
-}
-
-function renderThumbWidthResult() {
-  if (state.thumbWidthMm === null) {
-    thumbWidthResult.hidden = true;
-    return;
-  }
-  const angleDeg = estimateThumbAngleDeg(state.thumbWidthMm);
-  thumbWidthResult.hidden = false;
-  thumbWidthResult.textContent =
-    t("thumbWidthConfirmed")(fmt(state.thumbWidthMm.toFixed(1)), fmt(angleDeg.toFixed(2)));
-}
-
-thumbWidthSlider.addEventListener("input", renderThumbWidthBar);
-
-function setThumbMeasureExpanded(expanded) {
-  thumbMeasurePanel.hidden = !expanded;
-  thumbMeasureToggle.setAttribute("aria-expanded", String(expanded));
-  thumbVwidthLeft.hidden = !expanded;
-  thumbVwidthRight.hidden = !expanded;
-  if (expanded) {
-    thumbWidthSlider.value = state.thumbWidthMm ?? 20;
-    renderThumbWidthBar();
-    document.getElementById("thumb-measure-card").scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-}
-
-function toggleThumbMeasure() {
-  setThumbMeasureExpanded(thumbMeasurePanel.hidden);
-}
-
-thumbMeasureToggle.addEventListener("click", toggleThumbMeasure);
-document.querySelector("#thumb-measure-card h3").addEventListener("click", toggleThumbMeasure);
-
-thumbWidthConfirm.addEventListener("click", () => {
-  state.thumbWidthMm = thumbWidthSlider.valueAsNumber;
-  localStorage.setItem("snellen.thumbWidthMm", state.thumbWidthMm);
-  renderThumbBar();
-  renderThumbWidthResult();
-  setThumbMeasureExpanded(false);
-});
-
-renderThumbWidthResult();
 
 /* ============================================================
  * Étape 2b — Distance : tache aveugle / blind-spot measurement
@@ -749,6 +588,12 @@ const bs = {
   direction: 1,
   speed: 0,       // px/s courant (pour reconstituer une position passée)
   trialStartedAt: 0, // horodatage du début de l'essai en cours, pour borner la correction
+  centerOffsetPx: null,     // meilleure estimation courante de l'écart (px), mesurée ou empirique
+  forceWideNextTrial: false, // true après un essai "trop loin" : le prochain essai revient à la fenêtre large
+  wideMissCount: 0,   // essais "trop loin" consécutifs pendant la phase large (avant resserrement) : élargit la fenêtre et neutralise la vitesse d'autant
+  usingNarrowWindow: false, // la fenêtre resserrée était-elle active pour l'essai en cours (positionBlindSpotStart)
+  trail: [],          // historique {t, x} des positions du point dans l'essai en cours, pour retrouver où il était à l'instant où la personne a commencé à dire « oui » (robuste à la vitesse variable et au gel à la limite)
+  boundaryHeldSince: 0, // instant du premier contact avec la limite (trop-loin/bord) : on y maintient le point un court instant, le temps que la reconnaissance vocale finalise un « oui » (cf. bsVoiceHoldMs)
 };
 
 let suppressBsStartClickUntil = 0;
@@ -756,11 +601,39 @@ let suppressBsStartClickUntil = 0;
 const bsZone = document.getElementById("bs-zone");
 const bsGoneControls = document.getElementById("bs-gone-controls");
 const bsDot = document.getElementById("bs-dot");
+const bsDotConfirm = document.getElementById("bs-dot-confirm");
 const bsCross = document.getElementById("bs-cross");
 const bsEyeLeft = document.getElementById("bs-eye-left");
 const bsEyeRight = document.getElementById("bs-eye-right");
 const testEyeLeftSide = document.getElementById("test-eye-left-side");
 const testEyeRightSide = document.getElementById("test-eye-right-side");
+
+// Le rappel "vous devez faire la mesure..." n'a de sens que tant que le
+// bouton est désactivé — sinon il contredit un bouton déjà cliquable.
+function setStartEyeTestEnabled(enabled) {
+  document.getElementById("btn-start-eye-test").disabled = !enabled;
+  document.getElementById("bs-stay-hint").hidden = enabled;
+}
+
+// Éléments propres à la mesure manuelle : masqués quand on peut sauter la
+// remesure grâce au suivi caméra déjà ancré (cf. applyBlindSpotSkipUI).
+function blindSpotMeasureEls() {
+  return [
+    document.getElementById("blindspot-eye-box"),
+    document.getElementById("cam-eye-hint-bs"),
+    document.getElementById("head-align-card"),
+    document.getElementById("bs-progress-box"),
+    document.getElementById("blindspot-text"),
+    document.getElementById("bs-measure-controls"),
+    document.getElementById("bs-status"),
+    document.getElementById("bs-result"),
+  ];
+}
+
+function applyBlindSpotSkipUI(skippable) {
+  document.getElementById("bs-camera-skip").hidden = !skippable;
+  blindSpotMeasureEls().forEach(el => { if (el) el.hidden = skippable; });
+}
 
 function showBlindSpotStep(eye) {
   state.currentEye = eye;
@@ -768,19 +641,43 @@ function showBlindSpotStep(eye) {
   bsStopAnim();
   bs.trial = 0;
   bs.samples = [];
+  bs.forceWideNextTrial = false;
+  bs.wideMissCount = 0;
   bs.measureEye = "right";
   bs.distances = { right: null, left: null };
   bs.attempted = { right: false, left: false };
   show("step-blindspot");
-  showBlindSpotPreview();
   renderBlindSpotCopy();
   document.getElementById("bs-status").textContent = "";
   document.getElementById("bs-result").innerHTML = "";
   document.getElementById("btn-bs-start").innerHTML = t("dist.blindStart");
-  document.getElementById("btn-start-eye-test").disabled = true;
+
+  // Le suivi caméra est ancré sur une mesure de tache aveugle précédente :
+  // s'il tourne encore, inutile de refaire toute la procédure pour cet œil.
+  const camDistanceMm = (cam.enabled && cam.anchorDistanceMm !== null) ? currentCameraDistanceMm() : null;
+  if (camDistanceMm !== null) {
+    state.measuredMm = camDistanceMm;
+    state.measuredByEye[eye] = camDistanceMm;
+    document.getElementById("bs-camera-skip-text").textContent = t("bsCameraSkipMessage")(fmtM(camDistanceMm));
+    applyBlindSpotSkipUI(true);
+    setStartEyeTestEnabled(true);
+  } else {
+    applyBlindSpotSkipUI(false);
+    showBlindSpotPreview();
+    setStartEyeTestEnabled(false);
+  }
   renderDistanceNote();
   renderMicBadge();
 }
+
+document.getElementById("btn-bs-remeasure").addEventListener("click", () => {
+  state.measuredMm = null;
+  state.measuredByEye[state.currentEye] = null;
+  applyBlindSpotSkipUI(false);
+  showBlindSpotPreview();
+  setStartEyeTestEnabled(false);
+  renderDistanceNote();
+});
 
 function showBlindSpotPreview() {
   bsStopAnim();
@@ -852,11 +749,26 @@ function positionBlindSpotPreviewCross() {
   bsCross.style.right = bs.measureEye === "left" ? "24px" : "auto";
 }
 
-// Fenêtre plausible autour de la distance attendue selon l'estimation au
-// pouce : on commence à 60 % pour éviter un long trajet inutile, et on reprend
-// l'essai à 140 % si la personne a probablement oublié de cliquer.
-const BS_THUMB_START_FACTOR = 0.6;
-const BS_THUMB_RETRY_FACTOR = 1.4;
+// Aucune estimation a priori (pas de pouce) : tant qu'il n'existe aucune
+// donnée réelle (ni pour cet œil, ni pour l'autre), le tout premier essai n'a
+// ni centre ni plafond — le point traverse à vitesse constante jusqu'au clic
+// ou au bord de l'écran. Dès qu'une vraie mesure existe, elle sert de centre
+// pour une fenêtre large (±40 %) ; après 3 échantillons de cet œil, la
+// fenêtre se resserre à ±20 % autour de leur moyenne.
+const BS_WIDE_START_FACTOR = 0.6;
+const BS_WIDE_RETRY_FACTOR = 1.4;
+
+const BS_NARROW_MIN_SAMPLES = 3;
+const BS_NARROW_START_FACTOR = 0.80;
+const BS_NARROW_RETRY_FACTOR = 1.2;
+
+// Si la fenêtre large ±40 % est quand même trop étroite (tache aveugle
+// réelle hors de cette fenêtre), chaque "trop loin" l'élargit de 10 points
+// supplémentaires pour l'essai suivant. bs.wideMissCount repart à 0 dès que
+// le resserrement (3 échantillons) prend le relais : ces essais élargis
+// n'ont alors plus lieu d'être.
+const BS_WIDE_MISS_STEP = 0.1;
+const BS_MIN_START_FACTOR = 0.1;
 
 function positionBlindSpotStart() {
   const zoneRect = bsZone.getBoundingClientRect();
@@ -867,15 +779,42 @@ function positionBlindSpotStart() {
   bs.minX = 40;
   const nearStart = Math.max(60, 0.04 * zoneRect.width);
   const available = bs.direction > 0 ? (bs.maxX - bs.crossX) : (bs.crossX - bs.minX);
-  const expectedBlindSpotOffset = state.pxPerMm
-    ? state.distanceMm * Math.tan(BLINDSPOT_ANGLE_DEG * Math.PI / 180) * state.pxPerMm
-    : 0;
-  const thumbStart = expectedBlindSpotOffset * BS_THUMB_START_FACTOR;
-  const thumbRetryOffset = expectedBlindSpotOffset * BS_THUMB_RETRY_FACTOR;
-  bs.plausibleMaxOffsetPx = thumbRetryOffset > 0 && thumbRetryOffset < available
-    ? thumbRetryOffset
+
+  // bs.distances.right est une distance (mm) une fois l'œil droit mesuré :
+  // reconvertie en écart écran (px) pour guider le départ de l'œil gauche
+  // tant que celui-ci n'a pas encore ses propres échantillons.
+  const rightEyeOffsetPx = (bs.distances.right !== null && state.pxPerMm)
+    ? bs.distances.right * Math.tan(BLINDSPOT_ANGLE_DEG * Math.PI / 180) * state.pxPerMm
     : null;
-  const startOffset = Math.min(Math.max(nearStart, thumbStart), available * 0.8);
+
+  const canNarrow = bs.samples.length >= BS_NARROW_MIN_SAMPLES && !bs.forceWideNextTrial;
+  bs.forceWideNextTrial = false; // ne s'applique qu'à l'essai qui suit immédiatement un "trop loin"
+  if (canNarrow) bs.wideMissCount = 0; // le resserrement prend le relais : repartir de zéro
+  bs.usingNarrowWindow = canNarrow;
+
+  const wideCenterOffset = bs.samples.length >= 1 ? trimmedMeanPx(bs.samples) : rightEyeOffsetPx;
+  const centerOffset = canNarrow ? trimmedMeanPx(bs.samples) : wideCenterOffset;
+  bs.centerOffsetPx = (centerOffset !== null && centerOffset > 0) ? centerOffset : null;
+
+  if (bs.centerOffsetPx === null) {
+    // Aucune donnée nulle part : premier essai sans fenêtre ni plafond.
+    bs.plausibleMaxOffsetPx = null;
+    bs.dotX = bs.crossX + bs.direction * nearStart;
+    bsDot.style.left = bs.dotX + "px";
+    return true;
+  }
+
+  const startFactor = canNarrow
+    ? BS_NARROW_START_FACTOR
+    : Math.max(BS_MIN_START_FACTOR, BS_WIDE_START_FACTOR - BS_WIDE_MISS_STEP * bs.wideMissCount);
+  const retryFactor = canNarrow
+    ? BS_NARROW_RETRY_FACTOR
+    : BS_WIDE_RETRY_FACTOR + BS_WIDE_MISS_STEP * bs.wideMissCount;
+
+  const startOffsetRaw = bs.centerOffsetPx * startFactor;
+  const retryOffsetRaw = bs.centerOffsetPx * retryFactor;
+  bs.plausibleMaxOffsetPx = retryOffsetRaw > 0 && retryOffsetRaw < available ? retryOffsetRaw : null;
+  const startOffset = Math.min(Math.max(nearStart, startOffsetRaw), available * 0.8);
   bs.dotX = bs.crossX + bs.direction * startOffset;
   bsDot.style.left = bs.dotX + "px";
   return true;
@@ -886,9 +825,11 @@ function bsStart() {
   suppressBsStartClickUntil = 0;
   bs.trial = 0;
   bs.samples = [];
+  bs.forceWideNextTrial = false;
+  bs.wideMissCount = 0;
   state.measuredMm = null;
   state.measuredByEye[state.currentEye] = null;
-  document.getElementById("btn-start-eye-test").disabled = true;
+  setStartEyeTestEnabled(false);
   bsZone.hidden = false;
   bsZone.classList.remove("preview");
   bsGoneControls.hidden = false;
@@ -899,26 +840,135 @@ function bsStart() {
   bsZone.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
+// Vitesse variable selon l'écart au centre estimé (mesuré ou empirique, cf.
+// bs.centerOffsetPx) : lente près de ce centre (~10 % d'écart), là où la
+// tache aveugle a le plus de chances de se trouver et où la précision
+// compte ; rapide au-delà (~40 % et plus), pour ne pas faire attendre toute
+// la traversée dans des zones où elle n'est presque jamais.
+const BS_SPEED_SLOW_BAND = 0.10;
+const BS_SPEED_FAST_BAND = 0.40;
+const BS_SPEED_SLOW_FACTOR = 0.55;
+const BS_SPEED_FAST_FACTOR = 2.2;
+// Neutralisation par essai "trop loin" pendant la phase large : 30 % par
+// miss, plus marqué que l'élargissement de fenêtre (10 %/miss) puisqu'une
+// vitesse plus uniforme aide dès le prochain essai, pas seulement une fois
+// la fenêtre suffisamment élargie.
+const BS_WIDE_MISS_SPEED_NEUTRALIZE_STEP = 0.3;
+
+function bsSpeedForOffset(offsetPx, centerPx, baseSpeed, slowFactor, fastFactor) {
+  if (!centerPx || centerPx <= 0) return baseSpeed;
+  const distFromCenter = Math.abs(offsetPx / centerPx - 1);
+  const t = Math.min(1, Math.max(0, (distFromCenter - BS_SPEED_SLOW_BAND) / (BS_SPEED_FAST_BAND - BS_SPEED_SLOW_BAND)));
+  const slow = baseSpeed * slowFactor;
+  const fast = baseSpeed * fastFactor;
+  return slow + t * (fast - slow);
+}
+
+// Vitesse de base d'un essai. Les fenêtres resserrées (essais 4+) couvrent une
+// distance plus courte : à vitesse constante, elles défileraient trop vite et
+// laisseraient trop peu de temps pour réagir et dire « oui ». On vise donc une
+// durée de traversée à peu près constante en calant la vitesse sur la distance
+// réellement parcourue (départ → limite « trop loin »). On ne dépasse jamais la
+// vitesse par défaut (les essais larges ne sont donc pas accélérés) et on garde
+// un plancher pour ne pas ramper.
+const BS_TARGET_TRAVEL_SEC = 5;
+function bsBaseSpeed(zoneWidth, startOffset) {
+  const fallback = Math.max(60, zoneWidth / 12);
+  if (bs.plausibleMaxOffsetPx === null) return fallback; // essai sans plafond : vitesse par défaut
+  const travelSpan = bs.plausibleMaxOffsetPx - startOffset;
+  if (travelSpan <= 0) return fallback;
+  return Math.min(fallback, Math.max(20, travelSpan / BS_TARGET_TRAVEL_SEC));
+}
+
+// Durée pendant laquelle on maintient le point à la limite quand le micro est
+// actif, le temps qu'un « oui » soit traité. Calée sur la latence vocale
+// réellement observée (mic.maxVoiceLatency, mesurée du début du « oui » au
+// résultat final) plus une marge : ainsi, même l'essai le plus court laisse
+// toujours « fin du défilement + délai de traitement » pour capter la voix.
+const BS_VOICE_HOLD_MARGIN_MS = 350;
+const BS_VOICE_HOLD_MIN_MS = 900;
+const BS_VOICE_HOLD_MAX_MS = 3000;
+function bsVoiceHoldMs() {
+  return Math.min(BS_VOICE_HOLD_MAX_MS, Math.max(BS_VOICE_HOLD_MIN_MS, mic.maxVoiceLatency + BS_VOICE_HOLD_MARGIN_MS));
+}
+
 function bsNextTrial() {
+  // Repli défensif : garantit que le point rouge est bien visible au départ
+  // d'un nouvel essai, même si le flash de capture n'avait pas fini de
+  // s'effacer (essai précédent très rapide, throttling, etc.).
+  clearTimeout(flashCaptureFeedback._timer);
+  bsDot.classList.remove("bs-dot-captured");
+  bsDotConfirm.classList.remove("visible");
+  // On repart d'un état vocal propre à chaque essai : un début de parole ou une
+  // attente de confirmation restés d'un essai précédent ne doivent pas biaiser
+  // celui-ci. L'historique de positions repart vide, et le compteur de maintien
+  // à la limite aussi.
+  mic.pendingConfirmSince = null;
+  bs.trail = [];
+  bs.boundaryHeldSince = 0;
   bs.trial = bs.samples.length + 1;
   document.getElementById("bs-status").textContent = t("bsTrial")(bs.trial, BS_TRIALS);
   const zoneRect = bsZone.getBoundingClientRect();
   positionBlindSpotStart();
   bs.running = true;
-  const SPEED = Math.max(60, zoneRect.width / 12); // px/s : traversée ~12 s
-  bs.speed = SPEED;
+  const startOffset = Math.abs(bs.dotX - bs.crossX);
+  const BASE_SPEED = bsBaseSpeed(zoneRect.width, startOffset); // vitesse calée pour une durée de traversée ~constante (cf. bsBaseSpeed)
+  bs.speed = BASE_SPEED;
   bs.trialStartedAt = performance.now();
+  // Chaque "trop loin" pendant la phase large neutralise un peu plus l'écart
+  // de vitesse (les deux facteurs convergent vers 1×, jamais au-delà) : un
+  // point qui bouge à vitesse plus uniforme laisse plus de chances de
+  // cliquer à temps si la fenêtre elle-même était mal calibrée.
+  const missCount = bs.usingNarrowWindow ? 0 : bs.wideMissCount;
+  const slowFactor = Math.min(1, BS_SPEED_SLOW_FACTOR * Math.pow(1 + BS_WIDE_MISS_SPEED_NEUTRALIZE_STEP, missCount));
+  const fastFactor = Math.max(1, BS_SPEED_FAST_FACTOR * Math.pow(1 - BS_WIDE_MISS_SPEED_NEUTRALIZE_STEP, missCount));
   let last = performance.now();
   function step(now) {
     if (!bs.running) return;
-    bs.dotX += bs.direction * SPEED * (now - last) / 1000;
+    const dt = (now - last) / 1000;
     last = now;
+    const offsetBefore = Math.abs(bs.dotX - bs.crossX);
+    const speed = bsSpeedForOffset(offsetBefore, bs.centerOffsetPx, BASE_SPEED, slowFactor, fastFactor);
+    bs.speed = speed;
+    bs.dotX += bs.direction * speed * dt;
+    bsTrailPush(now, bs.dotX);
+
     const offset = Math.abs(bs.dotX - bs.crossX);
-    if (bs.plausibleMaxOffsetPx !== null && offset >= bs.plausibleMaxOffsetPx) return bsTooFarReached();
-    if ((bs.direction > 0 && bs.dotX >= bs.maxX) || (bs.direction < 0 && bs.dotX <= bs.minX)) return bsEdgeReached();
+    const hitTooFar = bs.plausibleMaxOffsetPx !== null && offset >= bs.plausibleMaxOffsetPx;
+    const hitEdge = (bs.direction > 0 && bs.dotX >= bs.maxX) || (bs.direction < 0 && bs.dotX <= bs.minX);
+    if (hitTooFar || hitEdge) {
+      // Un "oui"/"yes" a peut-être été dit juste avant que le point n'atteigne
+      // sa limite, mais la reconnaissance vocale met du temps à le confirmer
+      // (elle attend un silence pour finaliser). Quand le micro est actif, on
+      // maintient donc le point à la limite un court instant plutôt que de
+      // conclure tout de suite à un échec, pour laisser ce « oui » arriver —
+      // même si aucun début de parole n'a encore été détecté (essais resserrés
+      // qui se terminent sinon trop vite). Un début de parole déjà repéré
+      // prolonge ce maintien jusqu'au délai de grâce complet. La position
+      // réellement enregistrée reste celle du début du « oui » (cf. bs.trail),
+      // donc ce maintien ne biaise pas la mesure.
+      if (mic.enabled) {
+        if (bs.boundaryHeldSince === 0) bs.boundaryHeldSince = now;
+        const holdMs = bsVoiceHoldMs();
+        const confirmPending = mic.pendingConfirmSince !== null
+          && (now - mic.pendingConfirmSince) < holdMs;
+        const withinHold = (now - bs.boundaryHeldSince) < holdMs;
+        if (confirmPending || withinHold) {
+          bs.dotX = hitTooFar
+            ? bs.crossX + bs.direction * bs.plausibleMaxOffsetPx
+            : (bs.direction > 0 ? bs.maxX : bs.minX);
+          bsDot.style.left = bs.dotX + "px";
+          bsTrailPush(now, bs.dotX);
+          bs.animId = requestAnimationFrame(step);
+          return;
+        }
+      }
+      return hitTooFar ? bsTooFarReached() : bsEdgeReached();
+    }
     bsDot.style.left = bs.dotX + "px";
     bs.animId = requestAnimationFrame(step);
   }
+  bsTrailPush(performance.now(), bs.dotX);
   bs.animId = requestAnimationFrame(step);
 }
 
@@ -927,18 +977,63 @@ function bsStopAnim() {
   if (bs.animId) cancelAnimationFrame(bs.animId);
 }
 
+// Historique {t, x} des positions du point pour l'essai en cours. Permet de
+// retrouver où était le point à un instant passé (le début d'un « oui »)
+// quelle que soit la vitesse — variable — et même s'il a été gelé à la limite.
+function bsTrailPush(t, x) {
+  bs.trail.push({ t, x });
+  const cutoff = t - BS_TRAIL_MS;
+  while (bs.trail.length > 1 && bs.trail[0].t < cutoff) bs.trail.shift();
+}
+
+// Position du point à l'instant `atTime`, par interpolation dans l'historique.
+// Au-delà du dernier point enregistré (clic/Espace instantanés), on renvoie la
+// position courante ; avant le premier, la plus ancienne connue.
+function bsDotXAt(atTime) {
+  const trail = bs.trail;
+  if (!trail.length) return bs.dotX;
+  if (atTime >= trail[trail.length - 1].t) return bs.dotX;
+  if (atTime <= trail[0].t) return trail[0].x;
+  for (let i = trail.length - 1; i > 0; i--) {
+    if (trail[i - 1].t <= atTime) {
+      const a = trail[i - 1], b = trail[i];
+      const span = b.t - a.t;
+      const frac = span > 0 ? (atTime - a.t) / span : 0;
+      return a.x + (b.x - a.x) * frac;
+    }
+  }
+  return trail[0].x;
+}
+
+// Flash bref (clic, Espace ou "oui") : un point vert apparaît exactement là
+// où la réponse a été captée pendant que le point rouge s'efface un instant —
+// rend visible que ça a bien marché, surtout utile pour la voix qui n'a
+// sinon aucun retour visuel direct.
+const BS_CAPTURE_FLASH_MS = 450;
+function flashCaptureFeedback(dotXAtTime) {
+  bsDotConfirm.style.left = dotXAtTime + "px";
+  bsDot.classList.add("bs-dot-captured");
+  bsDotConfirm.classList.add("visible");
+  clearTimeout(flashCaptureFeedback._timer);
+  flashCaptureFeedback._timer = setTimeout(() => {
+    bsDot.classList.remove("bs-dot-captured");
+    bsDotConfirm.classList.remove("visible");
+  }, BS_CAPTURE_FLASH_MS);
+}
+
 // atTime : instant réel où le point a disparu du point de vue de la personne
 // (par défaut maintenant, pour le clic/Espace qui réagissent sans délai).
-// La réponse vocale, elle, n'est confirmée par le navigateur qu'après un
-// délai de traitement — on reconstitue donc la position du point à l'instant
-// où la personne a commencé à parler plutôt qu'à l'instant où la
-// reconnaissance a fini de traiter cette réponse, sans quoi la mesure serait
-// systématiquement biaisée vers une tache aveugle trop grande.
+// La réponse vocale, elle, n'est confirmée par le navigateur qu'après un délai
+// de traitement — on retrouve donc la position du point à l'instant où la
+// personne a commencé à dire « oui » (bsDotXAt), sans quoi la mesure — et le
+// point vert de confirmation — seraient biaisés vers une tache aveugle trop
+// grande (position de fin de traitement plutôt que de début de parole).
 function bsGone(atTime = performance.now()) {
   if (!bs.running) return;
   const clampedAtTime = Math.min(performance.now(), Math.max(bs.trialStartedAt, atTime));
-  const dotXAtTime = bs.dotX - bs.direction * bs.speed * (performance.now() - clampedAtTime) / 1000;
+  const dotXAtTime = bsDotXAt(clampedAtTime);
   bsStopAnim();
+  flashCaptureFeedback(dotXAtTime);
   bs.samples.push(Math.abs(dotXAtTime - bs.crossX));
   renderBlindSpotProgress();
   bsAdvance();
@@ -957,6 +1052,14 @@ function bsEdgeReached() {
 
 function bsTooFarReached() {
   bsStopAnim();
+  // La fenêtre resserrée (si elle était active) était probablement trop
+  // étroite pour cette fois : on repart large au prochain essai plutôt que de
+  // risquer d'enchaîner les "trop loin".
+  bs.forceWideNextTrial = true;
+  // Pendant la phase large (avant resserrement), chaque "trop loin" élargit
+  // encore la fenêtre pour le prochain essai — l'estimation au pouce est
+  // peut-être simplement mauvaise cette fois.
+  if (!bs.usingNarrowWindow) bs.wideMissCount += 1;
   document.getElementById("bs-result").innerHTML =
     `<span class="bs-warn">${t("bsTooFar")}</span>`;
   renderBlindSpotProgress();
@@ -995,6 +1098,8 @@ function bsFinish() {
     bs.measureEye = "left";
     bs.trial = 0;
     bs.samples = [];
+    bs.forceWideNextTrial = false;
+    bs.wideMissCount = 0;
     document.getElementById("btn-bs-start").innerHTML = t("dist.blindStart");
     showBlindSpotPreview();
     renderBlindSpotCopy();
@@ -1008,7 +1113,7 @@ function bsFinish() {
       ? valid.reduce((sum, value) => sum + value, 0) / valid.length
       : null;
     state.measuredByEye[state.currentEye] = state.measuredMm;
-    document.getElementById("btn-start-eye-test").disabled = state.measuredMm === null;
+    setStartEyeTestEnabled(state.measuredMm !== null);
     if (state.measuredMm !== null) calibrateCameraAnchor(state.measuredMm);
   }
 
@@ -1021,16 +1126,11 @@ function renderBsResult() {
   const right = bs.distances.right;
   const left = bs.distances.left;
   if (bs.attempted.right && bs.attempted.left && state.measuredMm !== null) {
-    let html = t("bsBothResult")(
+    el.innerHTML = t("bsBothResult")(
       right === null ? "—" : fmtM(right) + " m",
       left === null ? "—" : fmtM(left) + " m",
       fmtM(state.measuredMm)
     );
-    const pct = Math.round(Math.abs(state.measuredMm - state.distanceMm) / state.distanceMm * 100);
-    html += pct >= BS_MISMATCH_PCT
-      ? `<br><span class="bs-warn">${t("bsMismatchWarning")(fmt(pct))}</span>`
-      : t("bsCompare")(fmt(pct), fmtM(state.distanceMm));
-    el.innerHTML = html;
   } else if (bs.attempted.right && right !== null && !bs.attempted.left) {
     el.innerHTML = t("bsOneDone")("right", fmtM(right));
   } else if (bs.attempted.right && right === null && !bs.attempted.left) {
@@ -1045,7 +1145,7 @@ function renderDistanceNote() {
   if (state.measuredMm !== null) {
     el.innerHTML = t("useMeasured")(fmtM(state.measuredMm));
   } else if (document.getElementById("step-blindspot").classList.contains("active")) {
-    el.innerHTML = t("usePending")(fmtM(state.distanceMm));
+    el.innerHTML = ""; // pas encore de distance à annoncer avant la mesure
   } else {
     el.innerHTML = t("useNominal")(fmtM(state.distanceMm));
   }
@@ -1069,16 +1169,6 @@ document.getElementById("btn-start-eye-test").addEventListener("click", () => {
   startEyeTest(state.currentEye);
 });
 
-document.getElementById("btn-distanced").addEventListener("click", () => {
-  bsStopAnim();
-  bsZone.hidden = true;
-  bsZone.classList.remove("preview");
-  bsGoneControls.hidden = true;
-  document.body.classList.remove("bs-dimmed");
-  renderEyeStep();
-  show("step-eye");
-});
-
 /* ============================================================
  * Étape 3 — Type de test (chart / E / lettres) × yeux (1 ou 2)
  * ============================================================ */
@@ -1099,7 +1189,12 @@ document.querySelectorAll("#mode-eyes-choices .mode-choice").forEach(btn => {
 });
 
 document.getElementById("btn-mode-next").addEventListener("click", () => {
-  show(state.testMode === "chart" ? "step-manual-distance" : "step-distance");
+  if (state.testMode === "chart") {
+    show("step-manual-distance");
+  } else {
+    renderEyeStep();
+    show("step-eye");
+  }
 });
 
 /* ============================================================
@@ -1663,15 +1758,58 @@ const mic = {
   lastHeardTimer: null,
   practiceFadeTimer: null,
   startedAt: 0,      // horodatage du dernier rec.start() réussi, pour détecter les fins prématurées
-  rapidEndCount: 0,  // nombre de fins quasi immédiates consécutives (signe d'une boucle qui échoue)
-  // File des horodatages "onspeechstart" (un par bout de parole détecté),
-  // consommée en FIFO à chaque résultat final pour retrouver l'instant où la
-  // personne a commencé à parler plutôt que l'instant, plus tardif, où la
-  // reconnaissance a fini de traiter cette réponse (cf. tache aveugle).
-  speechStartQueue: [],
+  rapidEndCount: 0,  // nombre de fins quasi immédiates consécutives sans le moindre résultat (signe d'une boucle qui échoue)
+  gotResultThisSession: false, // au moins un résultat reçu depuis le dernier rec.start() : une fin rapide n'est alors pas un échec
+  // Horodatage du dernier "onspeechstart" détecté (l'instant où la personne a
+  // commencé à parler). Une seule valeur, remplacée à chaque début de parole,
+  // plutôt qu'une file : on ne s'y fie que si elle tombe dans l'essai en cours
+  // (cf. onresult), donc pas de désynchronisation possible d'un essai à l'autre.
+  lastSpeechStart: null,
+  // Non nul dès qu'on détecte le début d'un "oui"/"yes" pendant un essai de
+  // tache aveugle en cours, jusqu'à ce que le résultat final arrive : sert à
+  // geler l'essai à la limite plutôt que de le rater à cause du délai de
+  // traitement vocal (cf. bsVoiceHoldMs).
+  pendingConfirmSince: null,
+  // Latence vocale maximale observée (ms) : du début d'un « oui » (onspeechstart)
+  // au résultat final. Calibrée par les premiers « oui » (essais faciles) puis
+  // utilisée pour dimensionner le maintien à la limite (bsVoiceHoldMs), afin que
+  // même les essais les plus courts laissent toujours le temps de capter la voix.
+  maxVoiceLatency: 0,
+  // Flux micro maintenu ouvert pendant toute la session (getUserMedia). Tant
+  // qu'il est ouvert, la permission reste accordée et le voyant micro reste
+  // allumé : les redémarrages de la reconnaissance (après chaque « oui »)
+  // deviennent silencieux, sans nouvelle demande de permission ni extinction
+  // visible du micro entre deux essais.
+  stream: null,
+  // Diagnostic vocal : mettre `mic.debug = true` dans la console pour tracer
+  // chaque évènement de reconnaissance (début de parole, résultat, fin, erreur)
+  // pendant la tache aveugle. Silencieux par défaut.
+  debug: false,
 };
 
-const MIC_SPEECH_QUEUE_MAX = 5; // borne défensive : évite toute croissance illimitée
+// Trace conditionnelle des évènements micro (cf. mic.debug).
+function micLog(...args) {
+  if (mic.debug) console.log("[mic]", ...args);
+}
+
+// Redémarre proactivement la reconnaissance après un « oui » validé. En mode
+// continu, plusieurs navigateurs (Chrome/Edge) deviennent muets après le
+// premier résultat final : plus aucun onspeechstart/onresult ne suit, et si
+// onend ne se déclenche pas non plus, on ne relance jamais l'écoute — d'où un
+// premier « oui » qui marche puis plus rien aux essais suivants. On force donc
+// une nouvelle session ; le redémarrage (via onend) tient largement dans la
+// pause de 600 ms entre deux essais.
+function restartRecognitionAfterConfirm() {
+  if (!mic.enabled || !mic.recognition) return;
+  micLog("restart après confirmation");
+  try { mic.recognition.stop(); } catch { /* onend enchaînera, ou déjà arrêté */ }
+}
+
+// Repli quand aucun "onspeechstart" exploitable n'est disponible : on rétro-date
+// le "oui" d'une durée typique de traitement vocal, faute de mieux.
+const BS_VOICE_FALLBACK_MS = 500;
+// Durée d'historique des positions du point conservée pour la rétro-datation.
+const BS_TRAIL_MS = 2500;
 
 // Homophones de transcription par langue et par mode. Les deux modes sont
 // disjoints (jamais actifs en même temps), donc « oh » peut vouloir dire
@@ -1840,7 +1978,7 @@ function buildVoiceGrammar(language) {
   return `#JSGF V1.0; grammar snellen; public <snellen> = ${[...words].join(" | ")} ;`;
 }
 
-function toggleMic() {
+async function toggleMic() {
   if (mic.enabled) {
     disableMic();
     return;
@@ -1850,6 +1988,20 @@ function toggleMic() {
     mic.status = "unsupported";
     renderMicStatus();
     return;
+  }
+  // On ouvre et on GARDE un flux micro pour toute la session : ça déclenche la
+  // demande de permission une seule fois (ici), maintient le voyant micro
+  // allumé, et rend silencieux les redémarrages de la reconnaissance qui
+  // suivent chaque « oui » — sinon chaque stop()/start() ré-acquiert le micro
+  // et peut redemander la permission / éteindre brièvement le micro.
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      mic.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      mic.status = "denied";
+      renderMicStatus();
+      return;
+    }
   }
   const rec = new SR();
   rec.lang = speechRecognitionLang();
@@ -1871,17 +2023,34 @@ function toggleMic() {
   }
 
   rec.onresult = (event) => {
+    // Preuve que la reconnaissance fonctionne bel et bien : une fin rapide
+    // juste après ne doit alors jamais être comptée comme un échec (cf. onend).
+    mic.gotResultThisSession = true;
+    // Ce résultat lève l'attente, qu'il corresponde à "oui"/"yes" ou non —
+    // l'essai de tache aveugle (gelé le cas échéant, cf. bsNextTrial) peut
+    // maintenant être tranché.
+    mic.pendingConfirmSince = null;
     const testActive = document.getElementById("step-test").classList.contains("active");
     const blindspotActive = document.getElementById("step-blindspot").classList.contains("active");
     const eyeStepActive = document.getElementById("step-eye").classList.contains("active");
+    if (mic.debug && blindspotActive) {
+      const first = event.results[event.resultIndex] && event.results[event.resultIndex][0];
+      micLog("onresult", first ? JSON.stringify(first.transcript.trim()) : "(?)",
+        "bs.running=", bs.running, "essai", bs.trial);
+    }
     if (!testActive && !blindspotActive && !eyeStepActive) return;
 
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const result = event.results[i];
       if (!result.isFinal) continue;
-      // Un seul bout de parole (donc un seul horodatage "onspeechstart") par
-      // résultat final, quel que soit le nombre d'hypothèses alternatives.
-      const speechStartedAt = mic.speechStartQueue.length ? mic.speechStartQueue.shift() : performance.now();
+      // Instant où la personne a commencé à dire « oui » : on prend le dernier
+      // "onspeechstart" s'il tombe bien dans l'essai en cours, sinon un repli
+      // (durée typique de traitement vocal). Ça sert à retrouver, via l'historique
+      // des positions du point (bs.trail), où il était à ce moment-là plutôt qu'à
+      // l'instant, plus tardif, où la reconnaissance a fini de traiter la réponse.
+      const speechStartedAt = (mic.lastSpeechStart !== null && mic.lastSpeechStart >= bs.trialStartedAt)
+        ? mic.lastSpeechStart
+        : (performance.now() - BS_VOICE_FALLBACK_MS);
       for (const alt of result) {
         if (testActive) {
           const parsed = parseVoiceAnswer(alt.transcript);
@@ -1897,8 +2066,18 @@ function toggleMic() {
           // l'instant, plus tardif, où la reconnaissance a fini de traiter la
           // réponse — sinon la mesure serait biaisée vers une tache aveugle
           // trop grande à cause du délai de traitement vocal.
+          // Mesure de la latence vocale réelle (début du « oui » → maintenant),
+          // seulement quand on a un vrai début de parole (pas le repli) : sert à
+          // dimensionner le maintien à la limite des essais suivants.
+          if (mic.lastSpeechStart !== null && mic.lastSpeechStart >= bs.trialStartedAt) {
+            const latency = performance.now() - mic.lastSpeechStart;
+            if (latency > 0 && latency < 5000) mic.maxVoiceLatency = Math.max(mic.maxVoiceLatency, latency);
+            micLog("latence vocale", Math.round(latency), "→ max", Math.round(mic.maxVoiceLatency));
+          }
+          micLog("« oui » capté:", JSON.stringify(alt.transcript.trim()), "essai", bs.trial);
           showMicHeard(alt.transcript.trim());
           bsGone(speechStartedAt);
+          restartRecognitionAfterConfirm();
           break;
         } else if (eyeStepActive) {
           // Zone d'essai avant le test : on teste la transcription contre les
@@ -1915,12 +2094,21 @@ function toggleMic() {
   };
   rec.onstart = () => {
     mic.startedAt = performance.now();
+    mic.gotResultThisSession = false;
   };
   rec.onspeechstart = () => {
-    mic.speechStartQueue.push(performance.now());
-    if (mic.speechStartQueue.length > MIC_SPEECH_QUEUE_MAX) mic.speechStartQueue.shift();
+    mic.lastSpeechStart = performance.now();
+    // Un "oui"/"yes" vient peut-être de commencer : si l'essai en cours
+    // atteint sa limite avant que la reconnaissance ait fini de le traiter,
+    // on le gèlera plutôt que de le rater (cf. bsVoiceHoldMs).
+    const blindspotActive = document.getElementById("step-blindspot").classList.contains("active");
+    micLog("onspeechstart", "blindspot=", blindspotActive, "bs.running=", bs.running);
+    if (blindspotActive && bs.running) {
+      mic.pendingConfirmSince = performance.now();
+    }
   };
   rec.onerror = (event) => {
+    micLog("onerror", event.error);
     if (event.error === "not-allowed" || event.error === "service-not-allowed") {
       disableMic();
       mic.status = "denied";
@@ -1936,14 +2124,15 @@ function toggleMic() {
     // "no-speech" / "aborted" / "network" : bénins, onend relancera l'écoute
   };
   rec.onend = () => {
+    micLog("onend", "gotResult=", mic.gotResultThisSession, "rapidEndCount=", mic.rapidEndCount);
     if (!(mic.enabled && mic.recognition === rec)) return;
     // Le navigateur coupe l'écoute après un silence même en mode continu :
-    // c'est normal, on relance. Mais si la reconnaissance se termine presque
-    // instantanément à répétition, ce n'est plus du silence — c'est un échec
-    // en boucle (souvent un souci de permission qui redemande sans cesse
-    // côté navigateur). Mieux vaut s'arrêter proprement que de continuer à
-    // solliciter le navigateur indéfiniment.
-    mic.rapidEndCount = isRapidMicEnd(mic.startedAt) ? mic.rapidEndCount + 1 : 0;
+    // c'est normal, on relance. Une fin quasi instantanée n'est un signe
+    // d'échec en boucle (souvent un souci de permission qui redemande sans
+    // cesse côté navigateur) que si RIEN n'a été reconnu pendant cette
+    // session : un « oui » bref et net pendant la tache aveugle termine
+    // aussi la session très vite une fois traité, mais ce n'est pas un échec.
+    mic.rapidEndCount = (isRapidMicEnd(mic.startedAt) && !mic.gotResultThisSession) ? mic.rapidEndCount + 1 : 0;
     if (mic.rapidEndCount >= 4) {
       disableMic();
       mic.status = "error";
@@ -1986,7 +2175,12 @@ function disableMic() {
     try { mic.recognition.stop(); } catch { /* déjà arrêté */ }
     mic.recognition = null;
   }
-  mic.speechStartQueue = [];
+  if (mic.stream) {
+    try { mic.stream.getTracks().forEach((tr) => tr.stop()); } catch { /* déjà arrêté */ }
+    mic.stream = null;
+  }
+  mic.lastSpeechStart = null;
+  mic.pendingConfirmSince = null;
   renderMicStatus();
   renderMicBadge();
   const btn = document.getElementById("btn-mic-enable");
@@ -2396,19 +2590,6 @@ document.addEventListener("keydown", e => {
     if (cardKeys[e.key]) {
       e.preventDefault();
       adjustCardWidth(cardKeys[e.key]);
-    }
-    return;
-  }
-  if (document.getElementById("step-distance").classList.contains("active")) {
-    const distanceKeys = {
-      ArrowLeft: -10,
-      ArrowDown: -10,
-      ArrowRight: 10,
-      ArrowUp: 10,
-    };
-    if (distanceKeys[e.key]) {
-      e.preventDefault();
-      adjustThumbDistance(distanceKeys[e.key]);
     }
     return;
   }

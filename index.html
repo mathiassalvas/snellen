@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Test Snellen - Mathias</title>
-  <link rel="stylesheet" href="style.css?v=20260714-mic-sloanfix">
+  <link rel="stylesheet" href="style.css?v=20260717-voice-hold-latency">
 </head>
 <body>
 
@@ -59,72 +59,7 @@
     </div>
   </section>
 
-  <!-- ÉTAPE 2 : Distance -->
-  <section id="step-distance" class="step">
-    <div class="card">
-      <h2 data-i18n="dist.title"></h2>
-      <p data-i18n="dist.choose"></p>
-      <h3 data-i18n="dist.thumbTitle"></h3>
-      <ol class="thumb-steps">
-        <li><strong data-i18n="dist.step1Title"></strong> <span data-i18n="dist.step1Text"></span></li>
-        <li><strong data-i18n="dist.step2Title"></strong> <span data-i18n="dist.step2Text"></span></li>
-      </ol>
-    </div>
-
-    <div class="card">
-      <p class="hint" data-i18n="dist.adjustBarLabel"></p>
-      <div id="thumb-zone">
-        <div id="thumb-bar"></div>
-      </div>
-      <label class="range-label" for="distance-slider">
-        <span data-i18n="dist.sliderLabel"></span>
-        <strong id="distance-value"></strong>
-      </label>
-      <input type="range" id="distance-slider" min="600" max="3000" step="10" value="1500">
-      <div class="thumb-size-controls">
-        <button class="btn thumb-adjust" id="thumb-smaller" data-i18n="dist.thumbSmaller"></button>
-        <button class="btn thumb-adjust" id="thumb-larger" data-i18n="dist.thumbLarger"></button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div id="thumb-measure-card" class="collapsible">
-        <div class="collapsible-header">
-          <h3 data-i18n="dist.measureThumbTitle"></h3>
-          <div class="collapsible-actions">
-            <button class="btn small" id="thumb-measure-toggle" data-i18n="dist.measureThumbToggle" aria-expanded="false" aria-controls="thumb-measure-panel"></button>
-          </div>
-        </div>
-
-        <div id="thumb-measure-panel" class="collapsible-body" hidden>
-          <p class="hint" data-i18n="dist.measureThumbInstructions"></p>
-          <div id="thumb-width-zone">
-            <div id="thumb-width-bar"></div>
-          </div>
-          <input type="range" id="thumb-width-slider" min="10" max="40" step="0.5" value="20">
-          <p class="hint" id="thumb-width-caption"></p>
-          <button class="btn primary small" id="thumb-width-confirm" data-i18n="dist.measureThumbConfirm"></button>
-        </div>
-        <p class="hint" id="thumb-width-result" hidden></p>
-      </div>
-    </div>
-
-    <!-- Barres verticales de mesure du pouce, plaquées sur les bords de l'écran :
-         plus ergonomique qu'une barre horizontale centrale pour poser le pouce
-         (gaucher à gauche, droitier à droite). Visibles seulement pendant la mesure. -->
-    <div id="thumb-vwidth-left" class="thumb-vwidth-track thumb-vwidth-track-left" hidden>
-      <div id="thumb-vwidth-bar-left" class="thumb-vwidth-fill"></div>
-    </div>
-    <div id="thumb-vwidth-right" class="thumb-vwidth-track thumb-vwidth-track-right" hidden>
-      <div id="thumb-vwidth-bar-right" class="thumb-vwidth-fill"></div>
-    </div>
-
-    <div class="card controls">
-      <button class="btn primary" id="btn-distanced" data-i18n="dist.ok"></button>
-    </div>
-  </section>
-
-  <!-- ÉTAPE 3 : Choix du test / Test choice -->
+  <!-- ÉTAPE 2 : Choix du test / Test choice -->
   <section id="step-mode" class="step">
     <div class="card">
       <h2 data-i18n="mode.title"></h2>
@@ -187,6 +122,7 @@
   <section id="step-eye" class="step">
     <div class="card">
       <h2 id="eye-title"></h2>
+      <p data-i18n="dist.choose"></p>
       <p id="eye-p1"></p>
       <p id="eye-p2"></p>
 
@@ -261,6 +197,12 @@
     </div>
     <div class="card">
       <h2 id="blindspot-title"></h2>
+
+      <div id="bs-camera-skip" hidden>
+        <p class="hint" id="bs-camera-skip-text"></p>
+        <button class="btn small" id="btn-bs-remeasure" data-i18n="dist.remeasureBtn"></button>
+      </div>
+
       <div id="blindspot-eye-box"></div>
       <p class="hint" id="cam-eye-hint-bs"></p>
       <div id="head-align-card">
@@ -291,7 +233,7 @@
       </div>
       <div id="blindspot-text"></div>
       <p class="hint" id="test-distance-note"></p>
-      <div class="bs-controls">
+      <div class="bs-controls" id="bs-measure-controls">
         <button class="btn" id="btn-bs-start" data-i18n="dist.blindStart"></button>
       </div>
       <p class="hint" id="bs-status"></p>
@@ -302,6 +244,7 @@
       <div id="bs-zone-instruction"></div>
       <div id="bs-cross">+</div>
       <div id="bs-dot"></div>
+      <div id="bs-dot-confirm"></div>
     </div>
     <div class="bs-gone-controls" id="bs-gone-controls" hidden>
       <button class="btn primary" id="btn-bs-gone" data-i18n="dist.blindGone"></button>
@@ -309,7 +252,7 @@
 
     <div class="card controls">
       <button class="btn primary" id="btn-start-eye-test" data-i18n="dist.startEyeTest" disabled></button>
-      <p class="hint" data-i18n="dist.blindStay"></p>
+      <p class="hint" id="bs-stay-hint" data-i18n="dist.blindStay"></p>
     </div>
   </section>
 
@@ -440,6 +383,6 @@
     <p data-i18n="footer.text"></p>
   </footer>
 
-  <script src="app.js?v=20260714-mic-sloanfix"></script>
+  <script src="app.js?v=20260717-voice-hold-latency"></script>
 </body>
 </html>
