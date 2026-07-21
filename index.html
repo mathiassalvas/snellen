@@ -3,10 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Test de vue Snellen à la maison : acuité visuelle estimée avec calibration par carte de crédit et distance mesurée par la tache aveugle. Home Snellen eye test with credit-card calibration and blind-spot distance measurement.">
+  <meta name="theme-color" content="#f4f6f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12161b" media="(prefers-color-scheme: dark)">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Test Snellen - Mathias">
+  <meta property="og:description" content="Test de vue Snellen à la maison — calibration par carte de crédit, distance mesurée par la tache aveugle, résultats Snellen / LogMAR. Home Snellen vision test in your browser.">
+  <meta property="og:url" content="https://mathiassalvas.github.io/snellen/">
   <title>Test Snellen - Mathias</title>
-  <link rel="stylesheet" href="style.css?v=20260717-voice-hold-latency">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <!-- La police optotype est en font-display: block (pas de glyphe de repli
+       pendant un test de vue) : la précharger évite d'attendre CSS → premier
+       usage pour la découvrir. -->
+  <link rel="preload" href="fonts/Optician-Sans.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Résolution DNS anticipée pour le suivi caméra optionnel (modèle MediaPipe). -->
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://storage.googleapis.com">
+  <link rel="stylesheet" href="style.css?v=20260719-ui2">
+  <script src="app.js?v=20260719-ui2" defer></script>
 </head>
 <body>
+
+  <noscript>
+    <p style="max-width:760px;margin:2rem auto;padding:1rem 1.25rem;border:1px solid #f0c36d;background:#fff7e6;border-radius:8px;color:#1a222c;">
+      Ce test nécessite JavaScript pour fonctionner. / This test requires JavaScript to run.
+    </p>
+  </noscript>
+
+  <div id="flow-progress" aria-hidden="true"><span id="flow-progress-fill"></span></div>
 
   <div id="lang-toggle">
     <button class="btn small" id="btn-lang-fr" data-lang="fr">FR</button>
@@ -140,7 +164,7 @@
           <p class="hint" data-i18n="cam.text"></p>
         </div>
         <video id="cam-video" autoplay playsinline muted hidden></video>
-        <p class="hint" id="cam-status"></p>
+        <p class="hint" id="cam-status" aria-live="polite"></p>
       </div>
 
       <div id="mic-card" class="collapsible">
@@ -155,7 +179,7 @@
           <p class="hint" data-i18n="mic.text"></p>
           <p class="hint small" data-i18n="mic.textNote"></p>
         </div>
-        <p class="hint" id="mic-status"></p>
+        <p class="hint" id="mic-status" aria-live="polite"></p>
         <p class="hint" id="mic-expected-words"></p>
         <div id="mic-practice-row" hidden>
           <span id="mic-practice-label" data-i18n="mic.tryItLabel"></span>
@@ -225,7 +249,7 @@
         </div>
       </div>
       <div id="bs-progress-box">
-        <strong id="bs-progress-count">0/3</strong>
+        <strong id="bs-progress-count">0/5</strong>
         <span id="bs-progress-text"></span>
       </div>
       <div id="mic-badge-row-bs" hidden>
@@ -236,8 +260,8 @@
       <div class="bs-controls" id="bs-measure-controls">
         <button class="btn" id="btn-bs-start" data-i18n="dist.blindStart"></button>
       </div>
-      <p class="hint" id="bs-status"></p>
-      <p id="bs-result"></p>
+      <p class="hint" id="bs-status" aria-live="polite"></p>
+      <p id="bs-result" aria-live="polite"></p>
     </div>
 
     <div id="bs-zone" hidden>
@@ -296,7 +320,7 @@
     </div>
     <div id="test-align-warning" data-i18n="test.headAlignReminder"></div>
     <p class="hint" id="test-precision-note"></p>
-    <div id="cam-reject-banner" hidden></div>
+    <div id="cam-reject-banner" role="alert" hidden></div>
     <div id="optotype-zone">
       <div id="crowding-frame">
         <span class="crowding-bar top" aria-hidden="true"></span>
@@ -383,6 +407,5 @@
     <p data-i18n="footer.text"></p>
   </footer>
 
-  <script src="app.js?v=20260717-voice-hold-latency"></script>
 </body>
 </html>

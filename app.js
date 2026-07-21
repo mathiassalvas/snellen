@@ -42,7 +42,7 @@ const I18N = {
     "intro.need": "Il vous faut : une carte de crédit (ou toute carte au format standard), assez d'espace pour vous éloigner de l'écran (idéalement au moins environ 1 m), et quelque chose pour couvrir un œil.",
     "intro.start": "Commencer",
 
-    "cal.title": "Étape 1 — Calibration de l'écran",
+    "cal.title": "Calibration de l'écran",
     "cal.instructions": "Placez une carte de crédit, ou toute carte de taille standard, <strong>contre l'écran</strong>, sur le rectangle ci-dessous. Elle sert seulement d'objet de référence pour calibrer l'écran. Le format standard <a href=\"https://en.wikipedia.org/wiki/ISO/IEC_7810\" target=\"_blank\" rel=\"noopener noreferrer\">ISO/IEC 7810 ID-1</a> mesure <strong>85,60 mm × 53,98 mm</strong>. Ajustez le curseur jusqu'à ce que le rectangle ait <strong>exactement la même taille</strong> que votre carte.",
     "cal.smaller": "− plus petit",
     "cal.larger": "+ plus grand",
@@ -60,7 +60,7 @@ const I18N = {
     "dist.startEyeTest": "Commencer le test de cet œil",
     "dist.remeasureBtn": "Remesurer pour plus de précision",
 
-    "mode.title": "Étape 2 — Type de test",
+    "mode.title": "Choix du test",
     "mode.text": "Choisissez le type de test, puis si vous testez un œil à la fois, les deux ensemble, ou le test complet.",
     "mode.typeLabel": "Type de test",
     "mode.chartTitle": "Tableau Snellen",
@@ -78,7 +78,7 @@ const I18N = {
     "mode.completeText": "Recommandé — trois résultats : œil droit, œil gauche, puis les deux yeux ensemble.",
     "mode.next": "Continuer",
 
-    "eye.title": "Étape — Préparation du test",
+    "eye.title": "Préparation du test",
     "eye.p1Mono": "Le test se fait <strong>un œil à la fois</strong> (test monoculaire). Couvrez l'autre œil avec la paume de la main (sans appuyer) ou un cache. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
     "eye.p1Bi": "Le test se fait avec <strong>les deux yeux ouverts</strong> en même temps (test binoculaire), sans rien couvrir. Gardez vos lunettes ou lentilles si vous en portez habituellement — le test mesurera votre vision corrigée.",
     "eye.p1Complete": "Le test complet se fait en trois passes : <strong>œil droit</strong>, <strong>œil gauche</strong> (monoculaire), puis <strong>les deux yeux ensemble</strong> (binoculaire). Gardez vos lunettes ou lentilles si vous en portez habituellement.",
@@ -113,7 +113,7 @@ const I18N = {
 
     "footer.text": "Test 100 % local — aucune donnée n'est envoyée nulle part. Optotypes : Tumbling E et lettres Sloan.",
 
-    "manual.title": "Étape — Distance mesurée",
+    "manual.title": "Distance mesurée",
     "manual.text": "Avec un ruban ou un mètre, mesurez la distance réelle entre vos yeux et l'écran, puis entrez-la ci-dessous. Au moins 150 cm est recommandé pour une bonne précision — plus c'est loin, mieux c'est.",
     "manual.inputLabel": "Distance mesurée",
     "manual.next": "Continuer",
@@ -212,7 +212,7 @@ const I18N = {
     "intro.need": "You will need: a credit card (or any standard-size card), enough room to move back from the screen (ideally at least about 1 m / 3 ft), and something to cover one eye.",
     "intro.start": "Start",
 
-    "cal.title": "Step 1 — Screen calibration",
+    "cal.title": "Screen calibration",
     "cal.instructions": "Hold a credit card, or any standard-size card, <strong>against the screen</strong>, over the rectangle below. It is only a known-size reference for screen calibration. The standard <a href=\"https://en.wikipedia.org/wiki/ISO/IEC_7810\" target=\"_blank\" rel=\"noopener noreferrer\">ISO/IEC 7810 ID-1</a> size is <strong>85.60 mm × 53.98 mm</strong>. Adjust the slider until the rectangle is <strong>exactly the same size</strong> as your card.",
     "cal.smaller": "− smaller",
     "cal.larger": "+ larger",
@@ -230,7 +230,7 @@ const I18N = {
     "dist.startEyeTest": "Start this eye's test",
     "dist.remeasureBtn": "Remeasure for more precision",
 
-    "mode.title": "Step 2 — Test type",
+    "mode.title": "Choose your test",
     "mode.text": "Choose the test type, then whether you're testing one eye at a time, both together, or the complete test.",
     "mode.typeLabel": "Test type",
     "mode.chartTitle": "Snellen chart",
@@ -248,7 +248,7 @@ const I18N = {
     "mode.completeText": "Recommended — three results: right eye, left eye, then both eyes together.",
     "mode.next": "Continue",
 
-    "eye.title": "Step — Getting ready",
+    "eye.title": "Getting ready",
     "eye.p1Mono": "The test is done <strong>one eye at a time</strong> (monocular test). Cover the other eye with your palm (without pressing) or an occluder. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
     "eye.p1Bi": "The test is done with <strong>both eyes open</strong> at the same time (binocular test), nothing covered. Keep your glasses or contacts if you normally wear them — the test will measure your corrected vision.",
     "eye.p1Complete": "The complete test has three passes: <strong>right eye</strong>, <strong>left eye</strong> (monocular), then <strong>both eyes together</strong> (binocular). Keep your glasses or contacts if you normally wear them.",
@@ -283,7 +283,7 @@ const I18N = {
 
     "footer.text": "Runs 100% locally — no data is sent anywhere. Optotypes: Tumbling E and Sloan letters.",
 
-    "manual.title": "Step — Measured distance",
+    "manual.title": "Measured distance",
     "manual.text": "Using a tape measure, measure the real distance between your eyes and the screen, then enter it below. At least 150 cm is recommended for good accuracy — farther is better.",
     "manual.inputLabel": "Measured distance",
     "manual.next": "Continue",
@@ -475,9 +475,28 @@ const ROTATION = { right: 0, down: 90, left: 180, up: 270 };
 /* ============================================================
  * Navigation entre étapes / Step navigation
  * ============================================================ */
+// Position de chaque étape dans le parcours, pour la barre de progression en
+// haut de page. Les étapes alternatives (distance manuelle / préparation,
+// test / tableau / interlude) partagent le même rang.
+const FLOW_PROGRESS = {
+  "step-intro": 0,
+  "step-calibrate": 1,
+  "step-mode": 2,
+  "step-manual-distance": 3,
+  "step-eye": 3,
+  "step-blindspot": 4,
+  "step-test": 5,
+  "step-chart": 5,
+  "step-switch": 5,
+  "step-results": 6,
+};
+const FLOW_PROGRESS_MAX = 6;
+
 function show(stepId) {
   document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
   document.getElementById(stepId).classList.add("active");
+  const fill = document.getElementById("flow-progress-fill");
+  if (fill) fill.style.width = ((FLOW_PROGRESS[stepId] ?? 0) / FLOW_PROGRESS_MAX * 100) + "%";
   window.scrollTo(0, 0);
 }
 
@@ -1362,6 +1381,7 @@ const cam = {
   geomBlinkRight: null,
   yawDeg: null,     // rotation gauche/droite de la tête (lacet)
   flagged: false,
+  lastDetectAt: 0,  // horodatage de la dernière inférence MediaPipe (cf. CAMERA_DETECT_INTERVAL_MS)
 };
 
 // Les scores de clignement MediaPipe sont nommés selon le côté de l'image dans
@@ -1482,9 +1502,17 @@ async function toggleCamera() {
   trackCameraLoop();
 }
 
-function trackCameraLoop() {
+// Cadence de détection faciale : le suivi n'a pas besoin des ~60 images/s du
+// requestAnimationFrame — la distance et l'angle de tête évoluent lentement, et
+// ~13 mesures/s suffisent largement pour un retour fluide à l'œil. Espacer les
+// inférences divise par 4-5 le coût CPU/GPU du modèle MediaPipe (batterie,
+// ventilateur, réactivité du reste de la page).
+const CAMERA_DETECT_INTERVAL_MS = 66;
+
+function trackCameraLoop(now = performance.now()) {
   if (!cam.enabled) return;
-  if (cam.video.readyState >= 2) {
+  if (cam.video.readyState >= 2 && now - cam.lastDetectAt >= CAMERA_DETECT_INTERVAL_MS) {
+    cam.lastDetectAt = now;
     const result = cam.landmarker.detectForVideo(cam.video, performance.now());
     const lm = result.faceLandmarks && result.faceLandmarks[0];
     if (lm) {
@@ -1781,6 +1809,10 @@ const mic = {
   // deviennent silencieux, sans nouvelle demande de permission ni extinction
   // visible du micro entre deux essais.
   stream: null,
+  // Activation en cours (attente de la permission getUserMedia) : ignore les
+  // clics répétés sur le bouton pendant ce temps, sinon deux reconnaissances
+  // concurrentes peuvent être créées.
+  pending: false,
   // Diagnostic vocal : mettre `mic.debug = true` dans la console pour tracer
   // chaque évènement de reconnaissance (début de parole, résultat, fin, erreur)
   // pendant la tache aveugle. Silencieux par défaut.
@@ -1792,16 +1824,22 @@ function micLog(...args) {
   if (mic.debug) console.log("[mic]", ...args);
 }
 
-// Redémarre proactivement la reconnaissance après un « oui » validé. En mode
-// continu, plusieurs navigateurs (Chrome/Edge) deviennent muets après le
-// premier résultat final : plus aucun onspeechstart/onresult ne suit, et si
-// onend ne se déclenche pas non plus, on ne relance jamais l'écoute — d'où un
-// premier « oui » qui marche puis plus rien aux essais suivants. On force donc
-// une nouvelle session ; le redémarrage (via onend) tient largement dans la
-// pause de 600 ms entre deux essais.
-function restartRecognitionAfterConfirm() {
+// Redémarre proactivement la reconnaissance après CHAQUE résultat final. En
+// mode continu, plusieurs navigateurs (Chrome/Edge) deviennent muets après un
+// résultat final : plus aucun onspeechstart/onresult ne suit, et si onend ne
+// se déclenche pas non plus, on ne relance jamais l'écoute — d'où une première
+// réponse qui marche puis plus rien. Le problème touche autant les réponses du
+// test (lettres/directions) que le « oui » de la tache aveugle, et même une
+// transcription non reconnue : on force donc une nouvelle session après tout
+// résultat final, quelle que soit l'étape active. Le redémarrage (via onend)
+// prend ~100 ms, négligeable devant la pause naturelle entre deux réponses.
+// Bonus : chaque réponse repart dans une session neuve, donc "onspeechstart"
+// se redéclenche à chaque fois (en continu, Chrome ne l'émet qu'une seule fois
+// par session), ce qui garde la rétro-datation vocale de la tache aveugle
+// précise au-delà du premier essai.
+function restartRecognitionSession() {
   if (!mic.enabled || !mic.recognition) return;
-  micLog("restart après confirmation");
+  micLog("restart de session après résultat final");
   try { mic.recognition.stop(); } catch { /* onend enchaînera, ou déjà arrêté */ }
 }
 
@@ -1979,6 +2017,7 @@ function buildVoiceGrammar(language) {
 }
 
 async function toggleMic() {
+  if (mic.pending) return;
   if (mic.enabled) {
     disableMic();
     return;
@@ -1992,15 +2031,19 @@ async function toggleMic() {
   // On ouvre et on GARDE un flux micro pour toute la session : ça déclenche la
   // demande de permission une seule fois (ici), maintient le voyant micro
   // allumé, et rend silencieux les redémarrages de la reconnaissance qui
-  // suivent chaque « oui » — sinon chaque stop()/start() ré-acquiert le micro
-  // et peut redemander la permission / éteindre brièvement le micro.
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  // suivent chaque résultat — sinon chaque stop()/start() ré-acquiert le micro
+  // et peut redemander la permission / éteindre brièvement le micro. Un flux
+  // déjà ouvert (redémarrage pour changement de langue) est réutilisé tel quel.
+  if (!mic.stream && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    mic.pending = true;
     try {
       mic.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       mic.status = "denied";
       renderMicStatus();
       return;
+    } finally {
+      mic.pending = false;
     }
   }
   const rec = new SR();
@@ -2038,59 +2081,80 @@ async function toggleMic() {
       micLog("onresult", first ? JSON.stringify(first.transcript.trim()) : "(?)",
         "bs.running=", bs.running, "essai", bs.trial);
     }
-    if (!testActive && !blindspotActive && !eyeStepActive) return;
-
+    // Y a-t-il au moins un résultat FINAL dans ce lot ? Sert au redémarrage de
+    // session en sortie de handler, quel que soit le chemin pris ensuite.
+    let sawFinal = false;
     for (let i = event.resultIndex; i < event.results.length; i++) {
-      const result = event.results[i];
-      if (!result.isFinal) continue;
-      // Instant où la personne a commencé à dire « oui » : on prend le dernier
-      // "onspeechstart" s'il tombe bien dans l'essai en cours, sinon un repli
-      // (durée typique de traitement vocal). Ça sert à retrouver, via l'historique
-      // des positions du point (bs.trail), où il était à ce moment-là plutôt qu'à
-      // l'instant, plus tardif, où la reconnaissance a fini de traiter la réponse.
-      const speechStartedAt = (mic.lastSpeechStart !== null && mic.lastSpeechStart >= bs.trialStartedAt)
-        ? mic.lastSpeechStart
-        : (performance.now() - BS_VOICE_FALLBACK_MS);
-      for (const alt of result) {
+      if (event.results[i].isFinal) { sawFinal = true; break; }
+    }
+
+    if (testActive || blindspotActive || eyeStepActive) {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (!result.isFinal) continue;
         if (testActive) {
-          const parsed = parseVoiceAnswer(alt.transcript);
-          if (parsed !== null) {
+          for (const alt of result) {
+            const parsed = parseVoiceAnswer(alt.transcript);
+            if (parsed !== null) {
+              showMicHeard(alt.transcript.trim());
+              answer(parsed);
+              break;
+            }
+          }
+        } else if (blindspotActive && bs.running) {
+          // Instant où la personne a commencé à dire « oui » : on prend le dernier
+          // "onspeechstart" s'il tombe bien dans l'essai en cours, sinon un repli
+          // (durée typique de traitement vocal). Ça sert à retrouver, via l'historique
+          // des positions du point (bs.trail), où il était à ce moment-là plutôt qu'à
+          // l'instant, plus tardif, où la reconnaissance a fini de traiter la réponse.
+          const speechStartedAt = (mic.lastSpeechStart !== null && mic.lastSpeechStart >= bs.trialStartedAt)
+            ? mic.lastSpeechStart
+            : (performance.now() - BS_VOICE_FALLBACK_MS);
+          for (const alt of result) {
+            if (parseVoiceConfirm(alt.transcript) === null) continue;
+            // « oui »/« yes » = équivalent vocal du clic ou de la touche Espace
+            // quand le point disparaît ; bsGone() se re-garde déjà avec bs.running.
+            // On utilise l'instant où la personne a commencé à parler plutôt que
+            // l'instant, plus tardif, où la reconnaissance a fini de traiter la
+            // réponse — sinon la mesure serait biaisée vers une tache aveugle
+            // trop grande à cause du délai de traitement vocal.
+            // Mesure de la latence vocale réelle (début du « oui » → maintenant),
+            // seulement quand on a un vrai début de parole (pas le repli) : sert à
+            // dimensionner le maintien à la limite des essais suivants.
+            if (mic.lastSpeechStart !== null && mic.lastSpeechStart >= bs.trialStartedAt) {
+              const latency = performance.now() - mic.lastSpeechStart;
+              if (latency > 0 && latency < 5000) mic.maxVoiceLatency = Math.max(mic.maxVoiceLatency, latency);
+              micLog("latence vocale", Math.round(latency), "→ max", Math.round(mic.maxVoiceLatency));
+            }
+            micLog("« oui » capté:", JSON.stringify(alt.transcript.trim()), "essai", bs.trial);
             showMicHeard(alt.transcript.trim());
-            answer(parsed);
+            bsGone(speechStartedAt);
             break;
           }
-        } else if (blindspotActive && bs.running && parseVoiceConfirm(alt.transcript) !== null) {
-          // « oui »/« yes » = équivalent vocal du clic ou de la touche Espace
-          // quand le point disparaît ; bsGone() se re-garde déjà avec bs.running.
-          // On utilise l'instant où la personne a commencé à parler plutôt que
-          // l'instant, plus tardif, où la reconnaissance a fini de traiter la
-          // réponse — sinon la mesure serait biaisée vers une tache aveugle
-          // trop grande à cause du délai de traitement vocal.
-          // Mesure de la latence vocale réelle (début du « oui » → maintenant),
-          // seulement quand on a un vrai début de parole (pas le repli) : sert à
-          // dimensionner le maintien à la limite des essais suivants.
-          if (mic.lastSpeechStart !== null && mic.lastSpeechStart >= bs.trialStartedAt) {
-            const latency = performance.now() - mic.lastSpeechStart;
-            if (latency > 0 && latency < 5000) mic.maxVoiceLatency = Math.max(mic.maxVoiceLatency, latency);
-            micLog("latence vocale", Math.round(latency), "→ max", Math.round(mic.maxVoiceLatency));
-          }
-          micLog("« oui » capté:", JSON.stringify(alt.transcript.trim()), "essai", bs.trial);
-          showMicHeard(alt.transcript.trim());
-          bsGone(speechStartedAt);
-          restartRecognitionAfterConfirm();
-          break;
         } else if (eyeStepActive) {
           // Zone d'essai avant le test : on teste la transcription contre les
           // deux vocabulaires possibles (réponses du mode choisi + « oui »/
           // « yes ») et on affiche le résultat, reconnu ou non, pour que la
-          // personne puisse ajuster sa prononciation avant de commencer.
-          const transcript = alt.transcript.trim();
-          const recognized = parseVoiceAnswer(transcript) !== null || parseVoiceConfirm(transcript) !== null;
-          showMicPracticeFeedback(transcript, recognized);
-          break;
+          // personne puisse ajuster sa prononciation avant de commencer. On
+          // cherche parmi TOUTES les alternatives du moteur, comme pendant le
+          // vrai test — sinon la zone d'essai serait plus sévère que le test.
+          let matched = null;
+          for (const alt of result) {
+            const transcript = alt.transcript.trim();
+            if (parseVoiceAnswer(transcript) !== null || parseVoiceConfirm(transcript) !== null) {
+              matched = transcript;
+              break;
+            }
+          }
+          showMicPracticeFeedback(matched ?? result[0].transcript.trim(), matched !== null);
         }
       }
     }
+
+    // Après tout résultat final, le moteur peut devenir muet (cf.
+    // restartRecognitionSession) : on force une session neuve, que la
+    // transcription ait été reconnue ou non, et quelle que soit l'étape.
+    if (sawFinal) restartRecognitionSession();
   };
   rec.onstart = () => {
     mic.startedAt = performance.now();
@@ -2188,10 +2252,15 @@ function disableMic() {
 }
 
 // Changement de langue pendant que le micro tourne : on redémarre la
-// reconnaissance dans la nouvelle langue.
+// reconnaissance dans la nouvelle langue. Le flux micro déjà accordé est
+// conservé pendant la manœuvre — le couper redemanderait potentiellement la
+// permission et éteindrait brièvement le voyant micro pour rien.
 function restartMicForLanguage() {
   if (!mic.enabled) return;
+  const stream = mic.stream;
+  mic.stream = null; // soustrait le flux à disableMic(), qui l'arrêterait
   disableMic();
+  mic.stream = stream;
   toggleMic();
 }
 
@@ -2635,7 +2704,16 @@ function resultRow(label, res) {
 function resultLogmar(res) {
   const base = Math.log10(res.denominator / 6);
   const failedCorrect = Number.isFinite(res.failedCorrect) ? res.failedCorrect : 0;
-  return base - (failedCorrect * 0.02);
+  if (!failedCorrect || !res.failedAt) return base;
+  // Crédit par lettre lue sur la ligne échouée : une fraction (n/5) du pas
+  // logMAR RÉEL entre la ligne réussie et la ligne échouée. Le crédit classique
+  // de 0,02/lettre suppose des pas uniformes de 0,1 logMAR (tableau ETDRS) ;
+  // ici les pas vont de 0,06 (6/4,5 → 6/3,9) à 0,22 (6/60 → 6/36), donc un
+  // crédit fixe sur- ou sous-évaluerait selon la ligne. Comme une ligne échouée
+  // compte au plus 2 lettres lues (3 = réussite), le crédit reste toujours
+  // strictement inférieur à un pas complet.
+  const stepLogmar = Math.max(0, Math.log10(res.denominator / res.failedAt));
+  return base - (failedCorrect / TRIALS_PER_LINE) * stepLogmar;
 }
 
 function resultTouchesPrecisionLimit(res) {

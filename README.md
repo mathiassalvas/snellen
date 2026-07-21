@@ -1,178 +1,158 @@
 # Test Snellen - Mathias
 
-Site statique bilingue FR/EN qui estime l'acuite visuelle a la maison. Tout le
-test tourne dans le navigateur : HTML, CSS et JavaScript pur, sans serveur.
+Site statique bilingue FR/EN qui estime l'acuité visuelle à la maison. Tout le
+test tourne dans le navigateur : HTML, CSS et JavaScript pur, sans serveur ni
+dépendance de build.
 
-Ce projet n'est pas un dispositif medical. Il donne une estimation indicative
-seulement, sensible a la calibration, a la distance reelle, a l'eclairage, au
-zoom du navigateur et a la qualite de l'ecran.
+> ⚠️ Ce projet n'est **pas un dispositif médical**. Il donne une estimation
+> indicative seulement, sensible à la calibration, à la distance réelle, à
+> l'éclairage, au zoom du navigateur et à la qualité de l'écran. Il ne remplace
+> pas un examen par un professionnel de la vue.
 
 ## Fonctionnement
 
-1. **Calibration de l'ecran** — l'utilisateur pose une carte de credit contre
-   l'ecran et ajuste un rectangle. Une carte ISO/IEC 7810 ID-1 mesure
-   `85,60 mm x 53,98 mm`, ce qui permet de convertir les pixels CSS en
-   millimetres physiques.
-2. **Choix du test** — trois modes sont disponibles :
-   - `Tableau Snellen` : tableau complet, distance entree manuellement.
-   - `E directionnel` : un E de Snellen tourne, reponse avec les fleches.
-   - `Lettres Sloan` : une lettre optotype a la fois, reponse par lettre.
-3. **Choix des yeux** — un oeil a la fois, deux yeux ensemble, ou test complet
-   qui mesure l'oeil droit, l'oeil gauche, puis les deux yeux.
-4. **Distance** — le tableau utilise une distance mesuree au ruban. Les tests
-   interactifs utilisent d'abord le pouce pour une estimation, puis la tache
-   aveugle pour confirmer la distance avant chaque passe.
-5. **Resultats** — Snellen en metres, equivalent 20 pieds, decimal et LogMAR.
+1. **Calibration de l'écran** — l'utilisateur pose une carte de crédit contre
+   l'écran et ajuste un rectangle. Une carte ISO/IEC 7810 ID-1 mesure
+   `85,60 mm × 53,98 mm`, ce qui permet de convertir les pixels CSS en
+   millimètres physiques.
+2. **Choix du test** — trois modes :
+   - `Tableau Snellen` : tableau complet, distance entrée manuellement ;
+   - `Tumbling E` : un E de Snellen tourne, réponse avec les flèches ;
+   - `Lettres Sloan` : une lettre optotype isolée à la fois (recommandé).
+3. **Choix des yeux** — un œil à la fois, deux yeux ensemble, ou test complet
+   (œil droit, œil gauche, puis les deux yeux).
+4. **Distance** — le tableau utilise une distance mesurée au ruban. Les tests
+   interactifs mesurent la distance avec la **tache aveugle** avant chaque
+   passe (voir plus bas).
+5. **Résultats** — Snellen en mètres, équivalent 20 pieds, décimale et LogMAR
+   ajusté.
 
-## Mathematiques
+### Options pendant le test
 
-### Calibration ecran
+- **Réponse vocale (bêta)** — Web Speech API : dire « haut / bas / gauche /
+  droite », le nom d'une lettre, ou « oui » quand le point de la tache aveugle
+  disparaît. Les homophones fréquents sont mappés et une zone d'essai permet de
+  vérifier sa prononciation avant de commencer. Selon le navigateur, l'audio
+  peut transiter par ses serveurs (indiqué dans l'interface).
+- **Suivi caméra** — MediaPipe Face Landmarker (chargé à la demande depuis un
+  CDN) suit la distance et l'angle de tête pendant le test, ancré sur la mesure
+  de tache aveugle. L'analyse vidéo reste locale au navigateur.
 
-La calibration donne le nombre de pixels CSS par millimetre :
+## Mathématiques
+
+### Calibration écran
 
 ```text
 pxParMm = largeurRectanglePx / 85,60
 ```
 
-Toutes les tailles affichees utilisent ensuite cette valeur. Si le zoom du
-navigateur change apres la calibration, la relation pixel-millimetre change
-aussi; le site affiche donc un avertissement pendant les tests.
+Toutes les tailles affichées utilisent ensuite cette valeur. Si le zoom du
+navigateur change après la calibration, la relation pixel-millimètre change
+aussi ; le site affiche alors un avertissement pendant les tests.
 
 ### Taille des optotypes Snellen
 
-Dans un test Snellen, un optotype `6/6` sous-tend `5 minutes d'arc` en hauteur.
-Une ligne `6/d` grossit proportionnellement a `d / 6`.
-
-Le site calcule donc l'angle visuel cible :
+Un optotype `6/6` sous-tend `5 minutes d'arc` en hauteur ; une ligne `6/d`
+grossit proportionnellement à `d / 6` :
 
 ```text
-angleRad = (5 / 60 degres) * pi / 180 * (denominateur / 6)
+angleRad  = (5 / 60°) × π / 180 × (dénominateur / 6)
+hauteurMm = 2 × distanceMm × tan(angleRad / 2)
+hauteurPx = hauteurMm × pxParMm
 ```
 
-Puis convertit cet angle en hauteur physique a la distance de test :
+Exemple à `1500 mm` : `6/6 → 2,182 mm`, `6/3,9 → 1,418 mm` (20/13),
+`6/2,4 → 0,873 mm` (20/8).
 
-```text
-hauteurMm = 2 * distanceMm * tan(angleRad / 2)
-hauteurPx = hauteurMm * pxParMm
-```
+### Tumbling E
 
-Exemple a `1500 mm` de distance :
-
-```text
-6/6   -> 2,182 mm
-6/3,9 -> 1,418 mm   (equivalent 20/13)
-6/3   -> 1,091 mm   (equivalent 20/10)
-6/2,4 -> 0,873 mm   (equivalent 20/8)
-```
-
-### E directionnel
-
-Le `E` est un SVG avec `viewBox="0 0 5 5"`. Sa grille est donc exactement la
-grille classique d'un optotype de Snellen : hauteur totale `5 unites`, traits
-de `1 unite`, espacements de `1 unite`.
-
-Le JavaScript assigne directement :
-
-```text
-largeurSvgPx = hauteurPx
-hauteurSvgPx = hauteurPx
-```
-
-Le `E` directionnel ne depend donc pas d'une police.
+Le `E` est un SVG avec `viewBox="0 0 5 5"` : la grille classique d'un optotype
+de Snellen (hauteur 5 unités, traits et espaces de 1 unité). Sa taille CSS est
+assignée directement, sans dépendre d'une police.
 
 ### Lettres Sloan
 
 Une taille CSS `font-size: 40px` ne garantit pas un glyphe visible de `40px`.
-Pour les lettres, le site utilise Optician Sans et mesure chaque glyphe avec
+Le site utilise Optician Sans et mesure le glyphe de référence `E` avec
 `CanvasRenderingContext2D.measureText()` :
 
 ```text
-hauteurGlyphe = actualBoundingBoxAscent + actualBoundingBoxDescent
-ratioLettre = hauteurGlyphe / taillePoliceMesure
-fontSizePx = hauteurPx / ratioLettre
+ratio      = (actualBoundingBoxAscent + actualBoundingBoxDescent) / taillePolice
+fontSizePx = hauteurPx / ratio(E)
 ```
 
-Chaque lettre Sloan est donc ajustee pour que sa hauteur visible corresponde a
-la meme `hauteurPx` que le `E` directionnel.
+Le ratio du `E` (hauteur de capitale) est appliqué à toutes les lettres pour
+préserver le léger débordement optique voulu des lettres rondes (C, O). Des
+barres d'encombrement (*crowding bars*) entourent l'optotype isolé.
 
 ### Tableau Snellen
 
-Le tableau reutilise exactement le meme calcul que les lettres interactives.
-Les lignes affichees sont :
+Mêmes formules que le test interactif ; seules la présentation (5 lettres par
+ligne) et la saisie (ligne auto-déclarée) changent. Lignes : 20/50, 20/40,
+20/30, 20/25, 20/20, 20/15, 20/13, 20/10, 20/8.
+
+### Tache aveugle (distance)
+
+La tache aveugle est à environ `13,5°` du point de fixation (méthode du
+« virtual chinrest », Li et al. 2020). Un point dérive pendant que l'utilisateur
+fixe une croix ; la séparation croix-point au moment de la disparition donne :
 
 ```text
-20/50 = 6/15
-20/40 = 6/12
-20/30 = 6/9
-20/25 = 6/7,5
-20/20 = 6/6
-20/15 = 6/4,5
-20/13 = 6/3,9
-20/10 = 6/3
-20/8  = 6/2,4
+distanceMm = (séparationPx / pxParMm) / tan(13,5°)
 ```
 
-Le mode tableau differe seulement dans la presentation : plusieurs lettres par
-ligne sont affichees en meme temps, mais leur hauteur optique vient de la meme
-formule.
+Chaque œil est mesuré 5 fois ; on retire l'essai le plus court et le plus long
+puis on moyenne le reste. Les essais suivants démarrent dans une fenêtre
+adaptative centrée sur les mesures déjà acquises (élargie après un essai
+manqué), avec une vitesse ralentie près du centre attendu. En réponse vocale,
+la position retenue est celle du **début** du « oui » (rétro-datation via
+l'historique des positions), pas celle de la fin du traitement vocal.
 
-### Pouce
+### LogMAR ajusté
 
-Le pouce bras tendu est approxime a `2 degres` d'angle visuel. Pour une distance
-candidate `D`, la barre affichee a cette largeur physique :
-
-```text
-largeurPouceMm = 2 * D * tan(1 degre)
-largeurPoucePx = largeurPouceMm * pxParMm
-```
-
-Cette methode donne une premiere estimation pratique, pas la distance finale.
-Elle sert aussi a verifier si la mesure de tache aveugle est plausible : si la
-distance obtenue par la tache aveugle varie d'environ `30 %` ou plus par rapport
-a l'estimation au pouce, le site avertit l'utilisateur.
-
-L'estimation au pouce sert finalement de jalon pour rendre la tache aveugle plus
-rapide. Le point ne part pas du centre : il commence environ a `60 %` de la
-position attendue selon le pouce. Si le point depasse environ `140 %` de cette
-position sans que l'utilisateur ait indique sa disparition, l'essai est repris.
-Cela evite un long trajet inutile et aide quand l'utilisateur oublie de cliquer.
-
-### Tache aveugle
-
-La tache aveugle est approximee a `13,5 degres` du point de fixation. Le site
-fait disparaitre un point en mouvement pendant que l'utilisateur fixe une croix.
-La separation entre la croix et le point donne la distance :
-
-```text
-distanceMm = (separationPx / pxParMm) / tan(13,5 degres)
-```
-
-Chaque oeil est mesure 5 fois. Le site retire l'essai le plus court et le plus
-long, puis moyenne les autres essais pour reduire l'effet d'un clic trop tot ou
-trop tard.
+Le LogMAR de base est `log10(d / 6)` de la dernière ligne réussie. Chaque
+lettre lue sur la ligne échouée crédite `n/5` du pas logMAR **réel** entre la
+ligne réussie et la ligne échouée (les pas de ce tableau ne sont pas des pas
+uniformes de 0,1).
 
 ## Limites pratiques
 
 - Le test n'est fiable que si la calibration et la distance sont bonnes.
-- Le zoom du navigateur doit rester stable apres la calibration.
-- Les tres petites lignes peuvent etre limitees par la densite de pixels de
-  l'ecran; le site avertit alors dans les resultats plutot que d'arreter le
-  test trop tot.
-- La camera optionnelle sert a suivre la distance et l'angle horizontal de la
-  tete pendant le test interactif. Elle ne remplace pas les consignes visuelles
-  d'ouverture/fermeture des yeux.
+- Le zoom du navigateur doit rester stable après la calibration.
+- Les très petites lignes peuvent être limitées par la densité de pixels de
+  l'écran ; le site l'indique dans les résultats plutôt que d'arrêter le test.
+- La détection caméra d'un œil fermé est indicative seulement.
+
+## Développement
+
+Aucun build : servir le dossier tel quel, par exemple :
+
+```bash
+python3 -m http.server 8642
+# puis http://localhost:8642
+```
+
+Les URL d'assets portent un paramètre `?v=` à incrémenter à chaque déploiement
+pour invalider les caches.
+
+## Déploiement
+
+GitHub Actions (`.github/workflows/pages.yml`) publie `index.html`,
+`style.css`, `app.js`, `assets/` et `fonts/` sur GitHub Pages à chaque push sur
+`main`.
 
 ## Fichiers
 
-- `index.html` — structure des ecrans.
-- `style.css` — styles, responsive, optotypes et interface.
-- `app.js` — i18n, calibration, calculs physiques, logique des tests et
-  resultats.
-- `assets/` — police Optician Sans et visuels de l'accueil.
+- `index.html` — structure des écrans ;
+- `style.css` — styles, responsive, optotypes, thème clair/sombre ;
+- `app.js` — i18n, calibration, calculs physiques, tache aveugle, caméra,
+  réponse vocale, logique des tests et résultats ;
+- `fonts/` — police optotype Optician Sans (woff2 + licence) ;
+- `assets/` — favicon, visuels de l'accueil, police OTF de secours.
 
-## Vie privee
+## Vie privée
 
-Le test tourne localement dans le navigateur et ne transmet pas les resultats.
-Si l'utilisateur active le suivi camera optionnel, le modele de detection du
-visage est telecharge depuis un CDN externe au premier lancement, mais l'analyse
-video reste locale.
+Le test tourne localement et ne transmet pas les résultats. Le suivi caméra
+optionnel télécharge son modèle depuis un CDN au premier lancement, mais
+l'analyse vidéo reste locale. La reconnaissance vocale optionnelle est fournie
+par le navigateur et peut, selon celui-ci, utiliser ses serveurs.

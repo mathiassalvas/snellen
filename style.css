@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light dark;
   --bg: #f4f6f8;
   --fg: #1a222c;
   --card-bg: #ffffff;
@@ -113,10 +114,36 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 2rem 2.25rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
 }
 
-h1 { font-size: 2rem; margin-top: 0; line-height: 1.2; }
-h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
+h1 { font-size: 2rem; margin-top: 0; line-height: 1.2; letter-spacing: -0.015em; }
+h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; letter-spacing: -0.012em; }
+
+a { color: var(--accent); text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+
+input { accent-color: var(--accent); }
+
+/* Fine barre de progression du parcours, en haut de page (remplie par show()) */
+#flow-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 20;
+  pointer-events: none;
+}
+#flow-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.35s ease;
+}
+body.bs-dimmed #flow-progress { display: none; }
 
 .lead { font-size: 1.18rem; }
 .hint { color: var(--muted); font-size: 1rem; }
@@ -140,19 +167,40 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
   border-radius: 8px;
   padding: 0.8rem 1.35rem;
   cursor: pointer;
-  transition: filter 0.1s;
+  transition: filter 0.1s, transform 0.12s ease, box-shadow 0.12s ease;
 }
 .btn:hover { filter: brightness(0.95); }
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .btn:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
-.btn:disabled:hover { filter: none; }
+.btn:disabled:hover { filter: none; transform: none; }
 .btn.primary {
   background: var(--accent);
   color: var(--accent-fg);
   border-color: var(--accent);
   font-weight: 600;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+/* Boutons principaux du parcours : pleine largeur, bien visibles — un seul
+   geste évident par écran. */
+#btn-start, #btn-calibrated, #btn-mode-next, #btn-manual-distance-next,
+#btn-first-pass, #btn-second-pass, #btn-start-eye-test, #btn-restart {
+  display: block;
+  width: 100%;
+  margin-top: 1.4rem;
+  padding: 0.95rem 1.35rem;
+  font-size: 1.08rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover:not(:disabled) { transform: none; }
+  #flow-progress span { transition: none; }
 }
 .btn.small { padding: 0.5rem 0.9rem; font-size: 1rem; }
 .btn.ghost { border-style: dashed; color: var(--muted); }
@@ -190,7 +238,8 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
   position: absolute;
   width: var(--mark-size);
   height: var(--mark-size);
-  color: #000000;
+  /* couleur du thème : des repères noirs disparaissaient sur fond sombre */
+  color: var(--fg);
   pointer-events: none;
   z-index: 2;
 }
@@ -276,11 +325,13 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
   margin: 1rem 0;
 }
 .mode-choice {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   min-height: 132px;
   text-align: left;
+  padding-right: 2.2rem; /* réserve le coin de la coche de sélection */
 }
 .mode-choice span {
   color: var(--muted);
@@ -289,6 +340,23 @@ h2 { font-size: 1.55rem; margin-top: 0; line-height: 1.25; }
 .mode-choice.selected {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent);
+}
+.mode-choice.selected::after {
+  content: "✓";
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
 }
 #mode-type-choices { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 #mode-eyes-choices { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1105,6 +1173,14 @@ body.bs-dimmed #mic-badge-row-bs {
   padding: 0.7rem 0.8rem;
   text-align: center;
 }
+#results-table th {
+  background: color-mix(in srgb, var(--fg) 5%, var(--card-bg));
+  font-size: 0.95rem;
+}
+#results-table td { font-variant-numeric: tabular-nums; }
+#results-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--fg) 3%, transparent);
+}
 #results-table th:first-child, #results-table td:first-child { text-align: left; }
 
 footer { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 1rem; }
@@ -1145,7 +1221,12 @@ footer { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 1r
     min-height: 62px;
     font-size: 1.1rem;
   }
-  .mode-choices { grid-template-columns: 1fr; }
+  /* Les règles par ID (grilles à 3 colonnes) sont plus spécifiques que
+     .mode-choices : il faut les viser explicitement pour empiler sur mobile. */
+  .mode-choices,
+  #mode-type-choices,
+  #mode-eyes-choices { grid-template-columns: 1fr; }
+  .mode-choice { min-height: 0; }
   #test-header { flex-direction: column; align-items: center; text-align: center; }
   #test-align-warning { font-size: 1rem; }
   #letter-grid { grid-template-columns: repeat(5, 54px); gap: 0.45rem; }
